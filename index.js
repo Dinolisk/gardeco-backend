@@ -30,7 +30,7 @@ const receiptSchema = new mongoose.Schema({
       method: String,
       amount: Number,
       label: String,
-      details: String,
+      details: mongoose.Schema.Types.Mixed,
       timestamp: Date,
     },
   ],
