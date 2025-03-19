@@ -1,8 +1,10 @@
+// index.js
 require('dotenv').config(); // Laddar miljövariabler från .env
 
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const Receipt = require('./receiptModel'); // Importera Receipt-modellen från receiptModel.js
 
 const app = express();
 
@@ -23,24 +25,6 @@ mongoose.connect(mongoURI)
     process.exit(1); // Stäng ner servern vid anslutningsfel
   });
 
-// Schema för kvitton
-const receiptSchema = new mongoose.Schema({
-  paymentMethods: [
-    {
-      method: String,
-      amount: Number,
-      label: String,
-      details: mongoose.Schema.Types.Mixed,
-      timestamp: Date,
-    },
-  ],
-  total: Number,
-  createdAt: { type: Date, default: Date.now },
-});
-
-// Modell för kvitton
-const Receipt = mongoose.model('Receipt', receiptSchema);
-
 app.get('/', (req, res) => res.send('Hej från backend!'));
 
 // Endpoint för att ta emot kvittodata
@@ -49,7 +33,7 @@ app.post('/receipt', async (req, res) => {
   console.log('📩 Mottaget kvitto:', receiptData);
 
   try {
-    const newReceipt = new Receipt(receiptData);
+    const newReceipt = new Receipt(receiptData);  // Använd Receipt-modellen
     await newReceipt.save();
     res.status(200).json({ message: '✅ Kvitto sparat i databasen' });
   } catch (error) {
@@ -61,7 +45,7 @@ app.post('/receipt', async (req, res) => {
 // Endpoint för att hämta alla kvitton
 app.get('/get-receipt', async (req, res) => {
   try {
-    const receipts = await Receipt.find();
+    const receipts = await Receipt.find();  // Hämta kvitton från databasen
     console.log('📜 Hämtar alla kvitton:', receipts);
     res.status(200).json({ receipts });
   } catch (error) {
