@@ -1,29 +1,73 @@
-// receiptModel.js
-const mongoose = require('mongoose');
+const { Sequelize, DataTypes } = require('sequelize');
+require('dotenv').config();  // Ladda miljövariabler från .env
 
-// Schema för kvitton
-const receiptSchema = new mongoose.Schema({
-  paymentMethods: [
-    {
-      method: { type: String, required: true },  // Typen av betalningsmetod (t.ex. 'Card', 'Cash', 'Swish')
-      amount: { type: Number, required: true },  // Belopp som betalats
-      label: { type: String, required: true },   // Beskrivning av betalningen (t.ex. "Betalning med kort")
-      cardDetails: {  // För kortbetalning
-        cardType: String,   // Typ av kort (Visa, Mastercard, etc.)
-        last4: String,      // Sista 4 siffror på kortnumret
-      },
-      cashDetails: {   // För kontantbetalning
-        changeGiven: Number,  // Vexel som gavs till kunden
-      },
-      details: mongoose.Schema.Types.Mixed,  // För mer flexibla betalningar som Swish, Klarna, etc.
-      timestamp: { type: Date, default: Date.now },  // Tidpunkt för betalningen
-    },
-  ],
-  total: { type: Number, required: true },  // Totalbelopp för alla betalningar
-  createdAt: { type: Date, default: Date.now },  // Tidpunkt när kvittot skapades
+// Skapa en ny instans av Sequelize och koppla till din MySQL-databas via miljövariabler från .env
+const sequelize = new Sequelize({
+  host: process.env.DB_HOST,          // T.ex. database-1.c3gqi4amgqn9.eu-north-1.rds.amazonaws.com
+  username: process.env.DB_USER,      // T.ex. admin
+  password: process.env.DB_PASSWORD,  // T.ex. vilunda06
+  database: process.env.DB_NAME,      // T.ex. kvitton_db
+  dialect: 'mysql',                   // MySQL är databasdialekten
+  logging: false,                     // Sätt till true om du vill logga SQL-frågor
 });
 
-// Modell för kvitton
-const Receipt = mongoose.model('Receipt', receiptSchema);
+// Definiera Receipt-modellen
+const Receipt = sequelize.define('Receipt', {
+  total: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW,
+    allowNull: false,
+  },
+});
 
-module.exports = Receipt;
+// Definiera PaymentMethod-modellen (en separat modell för betalningsmetoder)
+const PaymentMethod = sequelize.define('PaymentMethod', {
+  method: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  amount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  label: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW,
+    allowNull: false,
+  },
+  cardType: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  last4: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  changeGiven: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  details: {
+    type: DataTypes.JSONB,  // För flexibla betalningsdetaljer (Swish, Klarna, etc.)
+    allowNull: true,
+  },
+});
+
+// Definiera relationen mellan Receipt och PaymentMethod (en Receipt kan ha flera PaymentMethods)
+Receipt.hasMany(PaymentMethod, { foreignKey: 'receiptId' });
+PaymentMethod.belongsTo(Receipt, { foreignKey: 'receiptId' });
+
+// Synkronisera modeller med databasen
+sequelize.sync()
+  .then(() => console.log('✅ Synkronisering med MySQL-databasen lyckades'))
+  .catch((err) => console.error('❌ Fel vid synkronisering:', err));
+
+module.exports = { Receipt, PaymentMethod };

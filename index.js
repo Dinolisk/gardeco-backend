@@ -1,56 +1,119 @@
-// index.js
-require('dotenv').config(); // Laddar miljövariabler från .env
-
+require('dotenv').config(); // Ladda miljövariabler från .env
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const Receipt = require('./receiptModel'); // Importera Receipt-modellen från receiptModel.js
+const { Sequelize, DataTypes } = require('sequelize');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Använd MongoDB-URI från .env istället för att hårdkoda den
-const mongoURI = process.env.MONGO_URI;
+// Skapa Sequelize-anslutning till AWS RDS
+const sequelize = new Sequelize({
+  host: process.env.DB_HOST,
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  dialect: 'mysql',
+  logging: false, // Sätt till true om du vill se SQL-frågor i konsolen
+});
 
-mongoose.connect(mongoURI)
-  .then(() => {
-    console.log('✅ Ansluten till MongoDB');
-    return mongoose.connection.db.admin().ping();
-  })
-  .then(() => console.log('✅ Pinged your deployment. Connection successful!'))
-  .catch(err => {
-    console.error('❌ Fel vid anslutning till MongoDB:', err.message);
-    process.exit(1); // Stäng ner servern vid anslutningsfel
-  });
+// Definiera Receipt-modellen
+const Receipt = sequelize.define('Receipt', {
+  total: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW,
+    allowNull: false,
+  },
+});
 
+// Definiera PaymentMethod-modellen
+const PaymentMethod = sequelize.define('PaymentMethod', {
+  receipt_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Receipt,
+      key: 'id',
+    },
+  },
+  method: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  amount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  label: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  details: {
+    type: DataTypes.JSON, // För att lagra detaljer som JSON
+    allowNull: true,
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: Sequelize.NOW,
+    allowNull: false,
+  },
+});
+
+// Definiera relationer mellan modellerna
+Receipt.hasMany(PaymentMethod, { foreignKey: 'receipt_id' });
+PaymentMethod.belongsTo(Receipt, { foreignKey: 'receipt_id' });
+
+// Synkronisera modeller med databasen
+sequelize.sync({ force: false }) // force: false behåller befintlig data
+  .then(() => console.log('✅ Ansluten och synkroniserad med MySQL'))
+  .catch((err) => console.error('❌ Fel vid anslutning/synkronisering:', err));
+
+// Endpoint: Hemsida
 app.get('/', (req, res) => res.send('Hej från backend!'));
 
-// Endpoint för att ta emot kvittodata
+// Endpoint: Spara kvitto
 app.post('/receipt', async (req, res) => {
-  const receiptData = req.body;
-  console.log('📩 Mottaget kvitto:', receiptData);
-
+  const { paymentMethods, total } = req.body;
   try {
-    const newReceipt = new Receipt(receiptData);  // Använd Receipt-modellen
-    await newReceipt.save();
+    // Skapa ett nytt kvitto
+    const receipt = await Receipt.create({ total });
+    const receiptId = receipt.id;
+
+    // Skapa betalningsmetoder kopplade till kvittot
+    await Promise.all(
+      paymentMethods.map((pm) =>
+        PaymentMethod.create({
+          receipt_id: receiptId,
+          method: pm.method,
+          amount: pm.amount,
+          label: pm.label,
+          details: pm.details, // Sequelize hanterar JSON automatiskt
+        })
+      )
+    );
+
     res.status(200).json({ message: '✅ Kvitto sparat i databasen' });
-  } catch (error) {
-    console.error('❌ Fel vid sparande av kvitto:', error.message);
-    res.status(500).json({ message: 'Fel vid sparande av kvitto', error: error.message });
+  } catch (err) {
+    console.error('❌ Fel vid sparande av kvitto:', err.message);
+    res.status(500).json({ message: 'Fel vid sparande av kvitto', error: err.message });
   }
 });
 
-// Endpoint för att hämta alla kvitton
+// Endpoint: Hämta alla kvitton
 app.get('/get-receipt', async (req, res) => {
   try {
-    const receipts = await Receipt.find();  // Hämta kvitton från databasen
-    console.log('📜 Hämtar alla kvitton:', receipts);
+    const receipts = await Receipt.findAll({
+      include: [{ model: PaymentMethod }], // Hämta relaterade betalningsmetoder
+    });
     res.status(200).json({ receipts });
-  } catch (error) {
-    console.error('❌ Fel vid hämtning av kvitton:', error.message);
-    res.status(500).json({ message: 'Fel vid hämtning av kvitton', error: error.message });
+  } catch (err) {
+    console.error('❌ Fel vid hämtning av kvitton:', err.message);
+    res.status(500).json({ message: 'Fel vid hämtning av kvitton', error: err.message });
   }
 });
 
