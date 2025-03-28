@@ -1,80 +1,16 @@
-require('dotenv').config(); // Ladda miljövariabler från .env
+require('dotenv').config(); // Ladda miljövariabler från .env (bara lokalt)
 const express = require('express');
 const cors = require('cors');
-const { Sequelize, DataTypes } = require('sequelize');
+const { sequelize, Receipt, PaymentMethod } = require('./receiptModel'); // Importera från receiptModel.js
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Skapa Sequelize-anslutning till AWS RDS
-const sequelize = new Sequelize({
-  host: process.env.DB_HOST,
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  dialect: 'mysql',
-  logging: false, // Sätt till true om du vill se SQL-frågor i konsolen
-});
-
-// Definiera Receipt-modellen
-const Receipt = sequelize.define('Receipt', {
-  total: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  createdAt: {
-    type: DataTypes.DATE,
-    defaultValue: Sequelize.NOW,
-    allowNull: false,
-  },
-});
-
-// Definiera PaymentMethod-modellen
-const PaymentMethod = sequelize.define('PaymentMethod', {
-  receipt_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Receipt,
-      key: 'id',
-    },
-  },
-  method: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  amount: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  label: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  details: {
-    type: DataTypes.JSON, // För att lagra detaljer som JSON
-    allowNull: true,
-  },
-  timestamp: {
-    type: DataTypes.DATE,
-    defaultValue: Sequelize.NOW,
-    allowNull: false,
-  },
-});
-
-// Definiera relationer mellan modellerna
-Receipt.hasMany(PaymentMethod, { foreignKey: 'receipt_id' });
-PaymentMethod.belongsTo(Receipt, { foreignKey: 'receipt_id' });
-
-// Synkronisera modeller med databasen
-sequelize.sync({ force: false }) // force: false behåller befintlig data
-  .then(() => console.log('✅ Ansluten och synkroniserad med MySQL'))
-  .catch((err) => console.error('❌ Fel vid anslutning/synkronisering:', err));
-
 // Endpoint: Hemsida
-app.get('/', (req, res) => res.send('Hej från backend!'));
+app.get('/', (req, res) => res.send('Hej från gardeco-backend!'));
 
 // Endpoint: Spara kvitto
 app.post('/receipt', async (req, res) => {

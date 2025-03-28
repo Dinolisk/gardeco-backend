@@ -1,14 +1,14 @@
 const { Sequelize, DataTypes } = require('sequelize');
-require('dotenv').config();  // Ladda miljövariabler från .env
+require('dotenv').config(); // Ladda miljövariabler från .env (lokalt)
 
-// Skapa en ny instans av Sequelize och koppla till din MySQL-databas via miljövariabler från .env
+// Skapa Sequelize-anslutning till databasen
 const sequelize = new Sequelize({
-  host: process.env.DB_HOST,          // T.ex. database-1.c3gqi4amgqn9.eu-north-1.rds.amazonaws.com
+  host: process.env.DB_HOST,          // T.ex. din AWS RDS host
   username: process.env.DB_USER,      // T.ex. admin
-  password: process.env.DB_PASSWORD,  // T.ex. vilunda06
+  password: process.env.DB_PASSWORD,  // T.ex. ditt lösenord
   database: process.env.DB_NAME,      // T.ex. kvitton_db
-  dialect: 'mysql',                   // MySQL är databasdialekten
-  logging: false,                     // Sätt till true om du vill logga SQL-frågor
+  dialect: 'mysql',                   // MySQL som databas
+  logging: false,                     // Sätt till true för att se SQL-frågor
 });
 
 // Definiera Receipt-modellen
@@ -24,8 +24,16 @@ const Receipt = sequelize.define('Receipt', {
   },
 });
 
-// Definiera PaymentMethod-modellen (en separat modell för betalningsmetoder)
+// Definiera PaymentMethod-modellen
 const PaymentMethod = sequelize.define('PaymentMethod', {
+  receipt_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Receipt,
+      key: 'id',
+    },
+  },
   method: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -37,6 +45,10 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
   label: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  details: {
+    type: DataTypes.JSON, // MySQL stöder JSON, inte JSONB
+    allowNull: true,
   },
   timestamp: {
     type: DataTypes.DATE,
@@ -55,19 +67,16 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
-  details: {
-    type: DataTypes.JSONB,  // För flexibla betalningsdetaljer (Swish, Klarna, etc.)
-    allowNull: true,
-  },
 });
 
-// Definiera relationen mellan Receipt och PaymentMethod (en Receipt kan ha flera PaymentMethods)
-Receipt.hasMany(PaymentMethod, { foreignKey: 'receiptId' });
-PaymentMethod.belongsTo(Receipt, { foreignKey: 'receiptId' });
+// Definiera relationer mellan modellerna
+Receipt.hasMany(PaymentMethod, { foreignKey: 'receipt_id' });
+PaymentMethod.belongsTo(Receipt, { foreignKey: 'receipt_id' });
 
 // Synkronisera modeller med databasen
-sequelize.sync()
-  .then(() => console.log('✅ Synkronisering med MySQL-databasen lyckades'))
-  .catch((err) => console.error('❌ Fel vid synkronisering:', err));
+sequelize.sync({ force: false }) // force: false behåller befintlig data
+  .then(() => console.log('✅ Ansluten och synkroniserad med MySQL'))
+  .catch((err) => console.error('❌ Fel vid anslutning/synkronisering:', err));
 
-module.exports = { Receipt, PaymentMethod };
+// Exportera sequelize och modellerna för användning i index.js
+module.exports = { sequelize, Receipt, PaymentMethod };
