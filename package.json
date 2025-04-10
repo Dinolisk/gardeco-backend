@@ -1,20 +1,32 @@
 {
   "name": "gardeco-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "pm2:start": "pm2 start server.js --name gardeco-backend",
+    "pm2:stop": "pm2 stop gardeco-backend",
+    "pm2:restart": "pm2 restart gardeco-backend",
+    "pm2:logs": "pm2 logs gardeco-backend",
+    "pm2:status": "pm2 status"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mysql2": "^3.14.0",
+    "node-fetch": "^3.3.2",
+    "pm2": "^5.3.1",
     "sequelize": "^6.37.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
   }
 }
