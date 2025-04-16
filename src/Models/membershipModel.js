@@ -1,14 +1,17 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../Database/db.js';
 
-const Membership = sequelize.define('Membership', {
+// --- Model Definition (med export direkt) ---
+export const Membership = sequelize.define('Membership', {
   card_id: {
     type: DataTypes.STRING,
     allowNull: false
+    // Överväg primaryKey: true här om card_id+membership_id är PK
   },
   membership_id: {
     type: DataTypes.STRING,
     allowNull: false
+    // Överväg primaryKey: true här om card_id+membership_id är PK
   },
   membership_type: {
     type: DataTypes.STRING,
@@ -18,42 +21,61 @@ const Membership = sequelize.define('Membership', {
     type: DataTypes.STRING,
     allowNull: true
   }
+  // Notera: Om card_id+membership_id inte är primärnyckel,
+  // lägger Sequelize till en 'id'-kolumn som standard.
 }, {
   tableName: 'memberships',
-  timestamps: true
+  timestamps: true // Använder createdAt/updatedAt
+  // Lägg till om du vill ha egna namn:
+  // createdAt: 'created_at',
+  // updatedAt: 'updated_at'
 });
 
-// Function to save membership information
-export const saveMembership = async (membershipData, cardId) => {
+// --- Uppdaterad saveMembership Function ---
+// Function to save or update membership information within a transaction
+export const saveMembership = async (membershipData, cardId, options = {}) => { // 1. Lägg till options = {}
   try {
     console.log("Saving Membership Data:", { membershipData, cardId });
 
     const membershipDetails = {
       card_id: cardId,
-      membership_id: membershipData.membershipId,
+      membership_id: membershipData.membershipId, // Antag att detta ID finns i membershipData
       membership_type: membershipData.membershipType ?? null,
       membership_level: membershipData.membershipLevel ?? null
     };
 
-    const [membership, created] = await Membership.findOrCreate({
-      where: {
-        card_id: cardId,
-        membership_id: membershipData.membershipId
-      },
-      defaults: membershipDetails
-    });
-
-    // If membership exists but has different info, update it
-    if (!created) {
-      await membership.update(membershipDetails);
+    // Grundläggande validering
+    if (!membershipDetails.card_id || !membershipDetails.membership_id) {
+        throw new Error("Missing card_id or membership_id for saving membership");
     }
 
-    console.log(created ? "Membership created" : "Membership updated");
+    // 2. Skicka med transaction till findOrCreate
+    const [membership, created] = await Membership.findOrCreate({
+      where: {
+        card_id: membershipDetails.card_id,
+        membership_id: membershipDetails.membership_id
+      },
+      defaults: membershipDetails,
+      transaction: options.transaction // <-- ÄNDRING HÄR
+    });
+
+    // Uppdatera om den hittades men hade annan info (typ/level)
+    if (!created) {
+      if (membership.membership_type !== membershipDetails.membership_type ||
+          membership.membership_level !== membershipDetails.membership_level)
+      {
+          console.log(`Updating existing membership info for card_id: ${cardId}, membership_id: ${membershipDetails.membership_id}`);
+          // 3. Skicka med transaction till update
+          await membership.update(membershipDetails, { transaction: options.transaction }); // <-- ÄNDRING HÄR
+      }
+    }
+
+    console.log(created ? "Membership created" : "Membership found/updated");
     return membership;
   } catch (error) {
     console.error("Error saving membership to database:", error);
-    throw error;
+    throw error; // Kasta felet vidare för rollback i controllern
   }
 };
 
-export { Membership };
+// Ingen 'export { Membership };' behövs i slutet

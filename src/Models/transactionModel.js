@@ -64,34 +64,36 @@ export const Transaction = sequelize.define('Transaction', {
   updatedAt: 'updated_at'
 });
 
-// --- 2. Function to Save Transaction (Original version from user) ---
-// Denna funktion används troligtvis när en transaktion först loggas,
-// inte för X-Receipts check-request. Behålls som den var.
-export const saveTransaction = async (transactionData, cardId = null) => {
+// UPPDATERAD version av saveTransaction som ska ersätta den gamla
+// i src/Models/transactionModel.js
+
+export const saveTransaction = async (transactionData, cardId = null, options = {}) => { // 1. Lägg till options = {}
   try {
-    // Map data - note: assumes transactionData might have slightly different structure/keys
-    // than the X-Receipts checkData. Review this mapping if needed.
+    // Mappa data precis som tidigare
     const data = {
       card_id: cardId,
       acquirer_terminal_id: transactionData.acquirerTerminalId,
-      acquirer_merchant_id: transactionData.acquirerMerchantId, // CR1
-      card_type: transactionData.paymentCard?.cardType, // CR3
-      acquirer_transaction_timestamp: new Date(transactionData.acquirerTransactionTimestamp), // Required
-      transaction_amount: transactionData.transactionAmount?.merchantTransactionAmount, // Required
-      transaction_currency: transactionData.transactionAmount?.merchantTransactionCurrency, // Required
-      authorization_code: transactionData.transactionIdentifier?.authorizationCode, // Required
-      system_trace_audit_number: transactionData.transactionIdentifier?.systemTraceAuditNumber, // CR2
-      retrieval_reference_number: transactionData.transactionIdentifier?.retrievalReferenceNumber, // CR2
-      masked_pan: Array.isArray(transactionData.paymentCard?.maskedPan) && transactionData.paymentCard.maskedPan.length > 0 // CR2
+      acquirer_merchant_id: transactionData.acquirerMerchantId,
+      card_type: transactionData.paymentCard?.cardType,
+      acquirer_transaction_timestamp: new Date(transactionData.acquirerTransactionTimestamp),
+      transaction_amount: transactionData.transactionAmount?.merchantTransactionAmount,
+      transaction_currency: transactionData.transactionAmount?.merchantTransactionCurrency,
+      authorization_code: transactionData.transactionIdentifier?.authorizationCode,
+      system_trace_audit_number: transactionData.transactionIdentifier?.systemTraceAuditNumber,
+      retrieval_reference_number: transactionData.transactionIdentifier?.retrievalReferenceNumber,
+      masked_pan: Array.isArray(transactionData.paymentCard?.maskedPan) && transactionData.paymentCard.maskedPan.length > 0
         ? transactionData.paymentCard.maskedPan.find(p => p.maskedPanType === 'PRIMARY_PAN')?.maskedPanValue || transactionData.paymentCard.maskedPan[0].maskedPanValue
         : null,
-      merchant_name: transactionData.merchantName // Conditional
+      merchant_name: transactionData.merchantName
     };
 
-    const transaction = await Transaction.create(data);
+    // 2. Skicka med transaktionsobjektet till Transaction.create
+    const transaction = await Transaction.create(data, { transaction: options.transaction }); // <-- ÄNDRING HÄR
+
     return transaction;
   } catch (error) {
     console.error('Error saving transaction:', error);
+    // 3. Kasta felet vidare för att controller ska kunna göra rollback
     throw error;
   }
 };

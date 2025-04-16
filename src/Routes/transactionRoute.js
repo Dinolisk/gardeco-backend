@@ -1,15 +1,14 @@
 import express from 'express';
 // Importera dina controllers och middleware
 // Anpassa sökvägarna om de inte stämmer exakt
-import { handleTransaction } from '../Controllers/transactionController.js'; // Om du har denna kvar
+import { handleTransaction } from '../Controllers/transactionController.js'; // <--- Aktiv igen
 import { handleTransactionCheck } from '../Controllers/transactionCheckController.js';
 import { authMiddleware } from '../Middlewares/authMiddleware.js';
 
 const router = express.Router();
 
 // Route för vanliga transaktioner (om den fortfarande behövs)
-// Om du inte har en handleTransaction controller kan du ta bort denna rad
-// router.post('/transaction', authMiddleware, handleTransaction);
+router.post('/transaction', authMiddleware, handleTransaction); // <--- Aktiv igen
 
 // Route specifikt för X-Receipts Transaction Check Request
 // Både authMiddleware och controllern appliceras korrekt
