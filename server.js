@@ -43,7 +43,7 @@ const initializeDatabase = async () => {
   try {
     // Denna synkroniserar bara de modeller som importerats HÄR.
     // Om du vill synka ALLA modeller, måste de importeras här ovan.
-    await sequelize.sync({ alter: false });
+    await sequelize.authenticate();
     console.log('✅ Database synchronized successfully');
   } catch (err) {
     console.error('❌ Error synchronizing database:', err);

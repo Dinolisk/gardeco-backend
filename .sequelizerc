@@ -1,0 +1,15 @@
+// .sequelizerc
+const path = require('path');
+
+module.exports = {
+  // Tala om var config-filen finns (med .js eller .cjs ändelse)
+  // ÄNDRA TILL .js OM DIN FIL HETER config.js
+  'config': path.resolve('config', 'config.cjs'),
+
+  // Tala om var dina modeller finns
+  'models-path': path.resolve('src', 'Models'),
+
+  // Standardmappar för migrations och seeders (behåll dessa)
+  'migrations-path': path.resolve('migrations'),
+  'seeders-path': path.resolve('seeders')
+};
