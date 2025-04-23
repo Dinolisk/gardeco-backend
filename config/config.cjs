@@ -1,23 +1,22 @@
 // config/config.js
-require('dotenv').config({ path: '../.env' }); // Läs in .env-filen från projektets rot
+require('dotenv').config();
 
 module.exports = {
   development: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306, // Lägg till port! Använd 3306 om DB_PORT saknas i .env
+    username: 'root',
+    password: 'qwER67890B!vbwe',
+    database: 'cashiersystem_db',
+    host: 'localhost',
+    port: 3306,
     dialect: "mysql"
     // Lägg till andra sequelize-optioner här om det behövs, t.ex. pool-inställningar
   },
   test: {
-    // Konfigurera för testdatabas - använd separata env-variabler om ni har det
-    username: process.env.DB_USER_TEST || process.env.DB_USER,
-    password: process.env.DB_PASSWORD_TEST || process.env.DB_PASSWORD,
-    database: process.env.DB_NAME_TEST || 'database_test', // Eller cashiersystem_db om ni testar mot samma?
-    host: process.env.DB_HOST_TEST || process.env.DB_HOST,
-    port: process.env.DB_PORT_TEST || process.env.DB_PORT || 3306,
+    username: 'root',
+    password: 'qwER67890B!vbwe',
+    database: 'cashiersystem_db',
+    host: 'localhost',
+    port: 3306,
     dialect: "mysql",
     logging: false // Stäng ofta av loggning för tester
   },

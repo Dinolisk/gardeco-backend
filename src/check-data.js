@@ -1,6 +1,6 @@
 import { sequelize, Receipt, PaymentMethod } from './Models/receiptModel.js';
 import { Transaction } from './Models/transactionModel.js';
-import { CardInfo } from './Models/cardInfoModel.js';
+import { Card } from './Models/cardModel.js';
 import { Membership } from './Models/membershipModel.js';
 
 const checkData = async () => {
@@ -31,12 +31,12 @@ const checkData = async () => {
       console.log('---');
     });
 
-    // Check CardInfo
-    const cardInfos = await CardInfo.findAll();
-    console.log('\nCard Infos found:', cardInfos.length);
-    cardInfos.forEach(card => {
-      console.log(`Card ID: ${card.card_id}`);
-      console.log(`- Type: ${card.card_type}`);
+    // Check Cards
+    const cards = await Card.findAll();
+    console.log('\nCards found:', cards.length);
+    cards.forEach(card => {
+      console.log(`Card ID: ${card.cardId}`);
+      console.log(`- Type: ${card.cardType}`);
       console.log(`- Created at: ${card.createdAt}`);
       console.log('---');
     });

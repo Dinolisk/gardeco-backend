@@ -1,9 +1,9 @@
 import request from 'supertest';
 import express from 'express';
-import { Transaction } from '../Models/transactionModel.js'; // Behövs för beforeAll och extra check
-import { sequelize } from '../Database/db.js';
+import { Transaction } from '../../models/transactionModel.js'; // Behövs för beforeAll och extra check
+import { sequelize } from '../../Database/db.js';
 // Importera routern istället för bara controllern
-import transactionRouter from '../Routes/transactionRoute.js'; // Antag att den exporteras som default
+import transactionRouter from '../../Routes/transactionRoute.js'; // Antag att den exporteras som default
 
 // Definiera en API-nyckel för testning
 const TEST_API_KEY = 'test-api-key-for-jest-12345';

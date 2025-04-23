@@ -1,8 +1,7 @@
 import { sequelize } from './Database/db.js';
 import { Receipt, PaymentMethod } from './Models/receiptModel.js';
 import { Transaction } from './Models/transactionModel.js';
-import { CardInfo } from './Models/cardInfoModel.js';
-import { CardID } from './Models/cardIDModel.js';
+import { Card } from './Models/cardModel.js';
 import { Membership } from './Models/membershipModel.js';
 
 const MAX_RETRIES = 3;
@@ -55,27 +54,27 @@ const testDatabase = async () => {
       receipt_id: receipt.id,
       method: 'CARD',
       amount: 2000,
-      label: 'Test Card Payment 2',  // different label
-      cardType: 'MASTERCARD',        // different card type
-      last4: '5678'                  // different last4
+      label: 'Test Card Payment 2',
+      cardType: 'MASTERCARD',
+      last4: '5678'
     });
     console.log('✅ PaymentMethod created:', paymentMethod.id);
 
-    // Test 2: Create CardInfo if it doesn't exist
-    console.log('\nTesting CardInfo creation...');
-    const [cardInfo, createdCardInfo] = await CardInfo.findOrCreate({
-      where: { card_id: 'TEST_CARD_002' }, // different card_id
+    // Test 2: Create Card if it doesn't exist
+    console.log('\nTesting Card creation...');
+    const [card, createdCard] = await Card.findOrCreate({
+      where: { cardId: 'TEST_CARD_002' },
       defaults: {
-        masked_pan: '************5678',
-        card_type: 'MASTERCARD'
+        maskedPan: '************5678',
+        cardType: 'MASTERCARD'
       }
     });
-    console.log(createdCardInfo ? '✅ CardInfo created for card:' : '✅ CardInfo already exists for card:', cardInfo.card_id);
+    console.log(createdCard ? '✅ Card created for card:' : '✅ Card already exists for card:', card.cardId);
 
     // Test 3: Create Membership if it doesn't exist
     console.log('\nTesting Membership creation...');
     const [membership, createdMembership] = await Membership.findOrCreate({
-      where: { membership_id: 'MEM_002' }, // different membership_id
+      where: { membership_id: 'MEM_002' },
       defaults: {
         card_id: 'TEST_CARD_002',
         membership_type: 'PREMIUM',
@@ -109,8 +108,8 @@ const testDatabase = async () => {
     const allTransactions = await Transaction.findAll();
     console.log('Total Transactions in database:', allTransactions.length);
     
-    const allCardInfos = await CardInfo.findAll();
-    console.log('Total CardInfos in database:', allCardInfos.length);
+    const allCards = await Card.findAll();
+    console.log('Total Cards in database:', allCards.length);
     
     const allMemberships = await Membership.findAll();
     console.log('Total Memberships in database:', allMemberships.length);

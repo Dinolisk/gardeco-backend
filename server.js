@@ -9,9 +9,8 @@ import fs from 'fs';      // <-- NY: Importera file system-modulen
 import { sequelize } from './src/Database/db.js';
 // Importera de modeller som faktiskt används av dina routes
 import { Transaction } from './src/Models/transactionModel.js';
-// Importera CardInfo och Membership om de används av handleTransaction
-// import { CardInfo } from './src/Models/cardInfoModel.js';
-// import { Membership } from './src/Models/membershipModel.js';
+import { Card } from './src/Models/cardModel.js';
+import { Membership } from './src/Models/membershipModel.js';
 import transactionRoutes from './src/Routes/transactionRoute.js';
 
 const app = express();
