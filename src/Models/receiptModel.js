@@ -1,11 +1,6 @@
 // src/Models/receiptModel.js
 import { Sequelize, DataTypes } from 'sequelize';
 import { sequelize } from '../Database/db.js';
-import { ReceiptLineItem } from './receiptLineItemModel.js'; 
-// Importera andra modeller här om relationer ska definieras i denna fil,
-// men det är oftast bättre i en dedikerad index.js för modeller.
-// import { Transaction } from './transactionModel.js';
-// import { ReceiptLineItem } from './receiptLineItemModel.js'; // När den finns
 
 // === Uppdaterad Receipt-modell ===
 const Receipt = sequelize.define('Receipt', {
@@ -35,13 +30,11 @@ const Receipt = sequelize.define('Receipt', {
   transaction_id: {             // NY kolumn (för FK)
     type: DataTypes.INTEGER,
     allowNull: true,            // Tillåt NULL som diskuterat
-    // Foreign key-relationen definieras separat nedan
   },
   vat_summary: {                // NY kolumn
     type: DataTypes.JSON,
     allowNull: true
   },
-  // createdAt och updatedAt sköts av timestamps: true
 }, {
   tableName: 'receipts',
   timestamps: true,             // Använder createdAt och updatedAt automatiskt
@@ -55,7 +48,6 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
   receipt_id: {                 // Kolumn för FK
     type: DataTypes.INTEGER,
     allowNull: false
-    // Själva FK-relationen definieras nedan
   },
   method: {
     type: DataTypes.STRING,
@@ -85,8 +77,6 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
      type: DataTypes.STRING,
      allowNull: true,
   },
-  // changeGiven togs bort, men lägg tillbaka om den finns och behövs
-  // changeGiven: { type: DataTypes.DECIMAL(10, 2), allowNull: true, }
 }, {
   tableName: 'paymentmethods', // Se till att namnet matchar er tabell
   timestamps: true,
@@ -94,35 +84,4 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
   updatedAt: 'updatedAt'
 });
 
-// === Definiera Relationer ===
-// (Görs efter att båda modellerna är definierade)
-
-// Ett Kvitto (Receipt) har många Betalningsmetoder (PaymentMethod)
-Receipt.hasMany(PaymentMethod, {
-  foreignKey: {
-    name: 'receipt_id',       // Kolumnen i PaymentMethod som pekar på Receipt
-    allowNull: false
-  },
-  as: 'paymentMethods'          // Valfritt alias
-});
-// En Betalningsmetod (PaymentMethod) hör till ett Kvitto (Receipt)
-PaymentMethod.belongsTo(Receipt, {
-  foreignKey: {
-    name: 'receipt_id',
-    allowNull: false
-  }
-});
-Receipt.hasMany(ReceiptLineItem, { foreignKey: 'receipt_id', as: 'lineItems' });
-
-// TODO Senare: Lägg till relationer till Transaction och ReceiptLineItem
-// När ReceiptLineItem-modellen finns:
-// Receipt.hasMany(ReceiptLineItem, { foreignKey: 'receipt_id', as: 'lineItems' });
-// ReceiptLineItem.belongsTo(Receipt, { foreignKey: 'receipt_id' });
-
-// När Transaction-modellen är tillgänglig (via import eller index.js):
-// Receipt.belongsTo(Transaction, { foreignKey: 'transaction_id', as: 'transaction' });
-// Transaction.hasMany(Receipt, { foreignKey: 'transaction_id', as: 'receipts' });
-
-
-// === Exportera Modellerna ===
 export { Receipt, PaymentMethod };

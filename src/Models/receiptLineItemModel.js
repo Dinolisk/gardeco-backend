@@ -1,7 +1,6 @@
 // src/Models/receiptLineItemModel.js
 import { Sequelize, DataTypes } from 'sequelize';
 import { sequelize } from '../Database/db.js';
-import { Receipt } from './receiptModel.js'; // Importera Receipt för relationen
 
 // === Definition av ReceiptLineItem-modellen ===
 export const ReceiptLineItem = sequelize.define('ReceiptLineItem', {
@@ -9,10 +8,6 @@ export const ReceiptLineItem = sequelize.define('ReceiptLineItem', {
   receipt_id: {                   // Foreign Key till receipts-tabellen
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {               // Definiera FK-referens här (eller bara via association)
-      model: Receipt,
-      key: 'id'
-    }
   },
   item_name: {                  // Motsvarar itemName
     type: DataTypes.STRING,     // Använd lämplig längd, t.ex. VARCHAR(255) i DB
@@ -85,20 +80,3 @@ export const ReceiptLineItem = sequelize.define('ReceiptLineItem', {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 });
-
-// === Definiera Relationer ===
-// En Varupost (ReceiptLineItem) hör till ett Kvitto (Receipt)
-ReceiptLineItem.belongsTo(Receipt, {
-  foreignKey: {
-    name: 'receipt_id', // Kolumnen i ReceiptLineItem
-    allowNull: false
-  }
-});
-
-// Kom ihåg att lägga till den motsatta relationen i receiptModel.js:
-// Receipt.hasMany(ReceiptLineItem, { foreignKey: 'receipt_id', as: 'lineItems' });
-
-// === Exportera Modellen ===
-// (Ingen export behövs här om ni skapar en index.js för modeller,
-// annars exportera den så den kan importeras där den behövs)
-// export { ReceiptLineItem }; // Avkommentera om ni inte har en central model-index.js
