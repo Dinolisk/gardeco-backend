@@ -56,6 +56,12 @@ export const Transaction = sequelize.define('Transaction', {
   merchant_name: {
     type: DataTypes.STRING, // Max 255 enligt doc
     allowNull: true  // Conditional field
+  },
+  xreceipt_status: {
+    type: DataTypes.ENUM('PENDING', 'MATCHED', 'NOT_ELIGIBLE'),
+    defaultValue: 'PENDING',
+    allowNull: false,
+    comment: 'Tracks the status of X-Receipt digital receipt eligibility and matching'
   }
 }, {
   tableName: 'transactions',
@@ -67,9 +73,8 @@ export const Transaction = sequelize.define('Transaction', {
 // UPPDATERAD version av saveTransaction som ska ersätta den gamla
 // i src/Models/transactionModel.js
 
-export const saveTransaction = async (transactionData, cardId = null, options = {}) => { // 1. Lägg till options = {}
+export const saveTransaction = async (transactionData, cardId = null, options = {}) => {
   try {
-    // Mappa data precis som tidigare
     const data = {
       card_id: cardId,
       acquirer_terminal_id: transactionData.acquirerTerminalId,
@@ -84,20 +89,33 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
       masked_pan: Array.isArray(transactionData.paymentCard?.maskedPan) && transactionData.paymentCard.maskedPan.length > 0
         ? transactionData.paymentCard.maskedPan.find(p => p.maskedPanType === 'PRIMARY_PAN')?.maskedPanValue || transactionData.paymentCard.maskedPan[0].maskedPanValue
         : null,
-      merchant_name: transactionData.merchantName
+      merchant_name: transactionData.merchantName,
+      xreceipt_status: 'PENDING'  // Set initial status
     };
 
-    // 2. Skicka med transaktionsobjektet till Transaction.create
-    const transaction = await Transaction.create(data, { transaction: options.transaction }); // <-- ÄNDRING HÄR
-
+    const transaction = await Transaction.create(data, { transaction: options.transaction });
     return transaction;
   } catch (error) {
     console.error('Error saving transaction:', error);
-    // 3. Kasta felet vidare för att controller ska kunna göra rollback
     throw error;
   }
 };
 
+// Add updateXReceiptStatus function
+export const updateXReceiptStatus = async (transactionId, status, options = {}) => {
+  try {
+    const transaction = await Transaction.findByPk(transactionId, { transaction: options.transaction });
+    if (!transaction) {
+      throw new Error(`Transaction with ID ${transactionId} not found`);
+    }
+
+    await transaction.update({ xreceipt_status: status }, { transaction: options.transaction });
+    return transaction;
+  } catch (error) {
+    console.error('Error updating X-Receipt status:', error);
+    throw error;
+  }
+};
 
 // --- 3. Function to Find Matching Transaction (NEW Revised Version) ---
 // Handles nested structure and CR1/CR2/CR3 logic

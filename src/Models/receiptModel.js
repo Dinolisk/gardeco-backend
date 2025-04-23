@@ -45,7 +45,7 @@ const Receipt = sequelize.define('Receipt', {
 // === Uppdaterad PaymentMethod-modell ===
 const PaymentMethod = sequelize.define('PaymentMethod', {
   // id: (INTEGER, PK, AI) läggs till automatiskt av Sequelize
-  receipt_id: {                 // Kolumn för FK
+  receipt_id: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
@@ -53,35 +53,50 @@ const PaymentMethod = sequelize.define('PaymentMethod', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  amount: {                     // Ändrad typ
+  amount: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  label: {                      // Behålls om den används
+  label: {
     type: DataTypes.STRING,
-    allowNull: true,            // Kanske bättre att tillåta NULL?
+    allowNull: false,
   },
-  details: {                    // Behålls om den används
+  details: {
     type: DataTypes.JSON,
     allowNull: true,
   },
-  timestamp: {                  // Matcha er databaskolumn
+  timestamp: {
     type: DataTypes.DATE,
-    allowNull: true             // Kanske ska vara false? Sattes default NOW i gamla modellen
+    allowNull: false
   },
-  cardType: {                   // Matcha er databaskolumn (om den finns separat)
+  cardType: {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  maskedPan: {                  // Matcha er databaskolumn (om den finns separat)
-     type: DataTypes.STRING,
-     allowNull: true,
+  last4: {  // Changed from maskedPan to last4
+    type: DataTypes.STRING,
+    allowNull: true,
   },
+  changeGiven: {  // Added missing field
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  }
 }, {
-  tableName: 'paymentmethods', // Se till att namnet matchar er tabell
+  tableName: 'paymentmethods',
   timestamps: true,
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+});
+
+// Add associations
+Receipt.hasMany(PaymentMethod, {
+  foreignKey: 'receipt_id',
+  as: 'paymentMethods'
+});
+
+PaymentMethod.belongsTo(Receipt, {
+  foreignKey: 'receipt_id',
+  as: 'receipt'
 });
 
 export { Receipt, PaymentMethod };

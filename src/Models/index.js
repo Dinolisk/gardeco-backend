@@ -4,7 +4,7 @@ import { sequelize } from '../Database/db.js'; // Er befintliga sequelize-instan
 
 // Importera alla era modelldefinitioner
 import { Transaction } from './transactionModel.js';
-import { CardInfo } from './cardInfoModel.js';
+import { Card } from './cardModel.js';
 import { Membership } from './membershipModel.js';
 import { Receipt, PaymentMethod } from './receiptModel.js'; // Båda från samma fil
 import { ReceiptLineItem } from './receiptLineItemModel.js';
@@ -14,7 +14,7 @@ const db = {};
 
 // Lägg till modellerna i db-objektet
 db.Transaction = Transaction;
-db.CardInfo = CardInfo;
+db.Card = Card;
 db.Membership = Membership;
 db.Receipt = Receipt;
 db.PaymentMethod = PaymentMethod;
@@ -63,11 +63,11 @@ db.ReceiptLineItem.belongsTo(db.Receipt, {
 // --- Eventuella relationer för CardInfo / Membership ---
 // Om ett Medlemskap (Membership) hör till ett Kort (CardInfo)
 // OBS: Kontrollera att `card_id` är korrekt FK i Membership-modellen/-tabellen
-db.Membership.belongsTo(db.CardInfo, {
+db.Membership.belongsTo(db.Card, {
   foreignKey: 'card_id'
 });
 // Ett Kort (CardInfo) kan ha många Medlemskap (Membership)
-db.CardInfo.hasMany(db.Membership, {
+db.Card.hasMany(db.Membership, {
   foreignKey: 'card_id',
   as: 'memberships'
 });
