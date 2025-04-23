@@ -1,0 +1,115 @@
+{
+	"info": {
+		"_postman_id": "123e4567-e89b-12d3-a456-426614174000",
+		"name": "X-Receipt Flow",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Create Initial Transaction",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{api_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cardId\": \"CARD123\",\n    \"transactionData\": {\n        \"acquirerTerminalId\": \"TERM002\",\n        \"acquirerTransactionTimestamp\": \"{{$isoTimestamp}}\",\n        \"transactionAmount\": {\n            \"merchantTransactionAmount\": 1250.50,\n            \"merchantTransactionCurrency\": \"NOK\"\n        },\n        \"transactionIdentifier\": {\n            \"authorizationCode\": \"AUTH456\",\n            \"systemTraceAuditNumber\": \"789012\",\n            \"retrievalReferenceNumber\": \"456789012\"\n        },\n        \"paymentCard\": {\n            \"cardType\": \"MASTERCARD\",\n            \"maskedPan\": [\n                {\n                    \"maskedPanType\": \"PRIMARY_PAN\",\n                    \"maskedPanValue\": \"************5678\"\n                }\n            ],\n            \"acquirerMerchantIds\": {\n                \"acquirerMerchantId\": \"MERCH002\"\n            }\n        },\n        \"merchantName\": \"Gardeco Store\"\n    }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/transaction",
+					"host": ["{{base_url}}"],
+					"path": ["api", "transaction"]
+				},
+				"description": "Create an initial transaction in our system when customer pays"
+			}
+		},
+		{
+			"name": "2. X-Receipt Transaction Check",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{api_key}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"acquirerTerminalId\": \"TERM002\",\n    \"acquirerTransactionTimestamp\": \"{{$isoTimestamp}}\",\n    \"transactionAmount\": {\n        \"merchantTransactionAmount\": 1250.50,\n        \"merchantTransactionCurrency\": \"NOK\"\n    },\n    \"transactionIdentifier\": {\n        \"authorizationCode\": \"AUTH456\",\n        \"systemTraceAuditNumber\": \"789012\",\n        \"retrievalReferenceNumber\": \"456789012\"\n    },\n    \"paymentCard\": {\n        \"cardType\": \"MASTERCARD\",\n        \"maskedPan\": [\n            {\n                \"maskedPanType\": \"PRIMARY_PAN\",\n                \"maskedPanValue\": \"************5678\"\n            }\n        ],\n        \"acquirerMerchantIds\": {\n            \"acquirerMerchantId\": \"MERCH002\"\n        }\n    },\n    \"merchantName\": \"Gardeco Store\",\n    \"xReceipts\": {\n        \"cardId\": \"CARD123\"\n    }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/transaction-check",
+					"host": ["{{base_url}}"],
+					"path": ["api", "transaction-check"]
+				},
+				"description": "X-Receipt sends this to check if we have a matching transaction"
+			}
+		},
+		{
+			"name": "3. Get Digital Receipt",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{api_key}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/transaction/{{transaction_id}}/receipt",
+					"host": ["{{base_url}}"],
+					"path": ["api", "transaction", "{{transaction_id}}", "receipt"]
+				},
+				"description": "Get the digital receipt in XDRE format for a matched transaction"
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (pm.response.code === 200) {",
+					"    if (pm.response.json().id) {",
+					"        pm.environment.set(\"transaction_id\", pm.response.json().id);",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:4001",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "your-api-key-here",
+			"type": "string"
+		}
+	]
+} 
