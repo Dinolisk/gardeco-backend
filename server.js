@@ -12,16 +12,22 @@ import { Transaction } from './src/Models/transactionModel.js';
 import { Card } from './src/Models/cardModel.js';
 import { Membership } from './src/Models/membershipModel.js';
 import transactionRoutes from './src/Routes/transactionRoute.js';
+import transactionRouter from './src/Routes/transaction.js';
 
 const app = express();
 
 // Middleware
 app.use(bodyParser.json()); // Eller app.use(express.json());
 
-// ---- NYTT: Läs in SSL-certifikatfiler ----
-// Använd sökvägarna du angav
-const privateKeyPath = 'C:/Certs/receipts.gardeco.se-key.pem'; // Behåll denna
-const certificatePath = 'C:/Certs/receipts.gardeco.se-chain.pem'; // <-- ÄNDRA TILL DENNA// <-- Fel filnamn
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// ---- SSL Configuration ----
+const privateKeyPath = 'C:/Certs/receipts.gardeco.se-key.pem';
+const certificatePath = 'C:/Certs/receipts.gardeco.se-chain.pem';
 let httpsOptions;
 
 try {
@@ -32,21 +38,22 @@ try {
   console.log('✅ SSL certificate files loaded successfully.');
 } catch (error) {
   console.error('❌ Error loading SSL certificate files:', error);
-  console.error('❌ Server cannot start HTTPS without certificates. Exiting.');
-  process.exit(1); // Avsluta om certifikat inte kan laddas
+  // Don't exit, try to start HTTP server instead
+  console.log('⚠️ Falling back to HTTP server');
 }
-// ------------------------------------------
 
-// Initialize Sequelize connection and sync ALL models
+// Initialize Sequelize connection
 const initializeDatabase = async () => {
   try {
-    // Denna synkroniserar bara de modeller som importerats HÄR.
-    // Om du vill synka ALLA modeller, måste de importeras här ovan.
     await sequelize.authenticate();
-    console.log('✅ Database synchronized successfully');
+    console.log('✅ Database connection established');
+    
+    await sequelize.sync({ alter: true });
+    console.log('✅ Database tables synchronized successfully');
   } catch (err) {
-    console.error('❌ Error synchronizing database:', err);
-    process.exit(1);
+    console.error('❌ Error initializing database:', err);
+    // Don't exit, try to continue without database
+    console.log('⚠️ Continuing without database connection');
   }
 };
 
@@ -55,31 +62,54 @@ initializeDatabase();
 
 // Use the transaction routes
 app.use('/api', transactionRoutes);
+app.use('/api/transaction', transactionRouter);
 
-// ---- ÄNDRAD: Starta HTTPS-servern ----
-// Använd standard HTTPS-port 443
-const HTTPS_PORT = 443; // Standard HTTPS-port
-// const PORT_HTTP = process.env.PORT || 4002; // Behåll om du vill ha en fallback HTTP också?
+// Start server
+let server;
+if (httpsOptions) {
+  server = https.createServer(httpsOptions, app).listen(443, "0.0.0.0", () => {
+    console.log(`🚀 HTTPS Server running on port 443`);
+  });
+} else {
+  server = app.listen(4002, "0.0.0.0", () => {
+    console.log(`🚀 HTTP Server running on port 4002`);
+  });
+}
 
-https.createServer(httpsOptions, app).listen(HTTPS_PORT, "0.0.0.0", () => {
-  console.log(`🚀 HTTPS Server running on port ${HTTPS_PORT}`);
-  // Ta bort eller kommentera bort den gamla app.listen för HTTP om du inte ska ha båda
-});
+// Graceful shutdown
+const shutdown = async () => {
+  console.log('Shutting down gracefully...');
+  
+  try {
+    await sequelize.close();
+    console.log('Database connection closed');
+  } catch (err) {
+    console.error('Error closing database connection:', err);
+  }
+  
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+  
+  // Force shutdown after 5 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 5000);
+};
 
-/* Ta bort eller kommentera bort den gamla HTTP-listenern:
-app.listen(PORT_HTTP, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT_HTTP}`);
-});
-*/
-// ------------------------------------
+// Handle process termination
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  process.exit(1);
+  shutdown();
 });
 
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled Rejection:', error);
-  process.exit(1);
+  shutdown();
 });

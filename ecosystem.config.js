@@ -1,26 +1,19 @@
-module.exports = {
+export default {
   apps: [{
     name: 'gardeco-backend',
-    script: './server.js',
-    watch: true,              // Automatically restart on file changes
-    ignore_watch: [           // Don't watch these directories
-      "node_modules",
-      "logs"
-    ],
+    cwd: 'C:/Users/Admin2/Documents/Gardeco/gardeco-backend',
+    script: 'C:/Users/Admin2/Documents/Gardeco/gardeco-backend/server.js',
+    interpreter: 'node',
+    interpreter_args: '--experimental-modules',
+    watch: false,
     env: {
       NODE_ENV: 'development',
-      PORT: 4002,            // Match the port in .env
-      DB_HOST: 'localhost',
-      DB_USER: 'root',
-      DB_PASSWORD: 'qwER67890B!vbwe',
-      DB_NAME: 'cashiersystem_db'
+      PORT: 4002
     },
-    env_production: {
-      NODE_ENV: 'production'
-    },
-    max_memory_restart: '1G', // Restart if memory exceeds 1GB
+    max_memory_restart: '1G',
     error_file: './logs/err.log',
     out_file: './logs/out.log',
-    time: true               // Add timestamps to logs
+    time: true,
+    log_date_format: 'YYYY-MM-DD HH:mm:ss'
   }]
 };

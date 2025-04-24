@@ -72,9 +72,10 @@ export const handleTransactionCheck = async (req, res) => {
     const cardIdToUpdate = body.xReceipts.cardId;
 
     await matchingTransaction.update({
-      card_id: cardIdToUpdate
+      card_id: cardIdToUpdate,
+      xreceipt_status: 'MATCHED'
     }, { transaction });
-    console.log(`Transaction ${matchingTransaction.id} updated with card_id.`);
+    console.log(`Transaction ${matchingTransaction.id} updated with card_id and MATCHED status.`);
 
     // --- 5. Slutför Transaktionen ---
     await transaction.commit();

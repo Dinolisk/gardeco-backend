@@ -5,23 +5,20 @@ export const Card = sequelize.define('Card', {
   cardId: {
     type: DataTypes.STRING,
     allowNull: false,
-    primaryKey: true,
-    field: 'card_id' // maps camelCase to snake_case in DB
+    primaryKey: true
   },
   maskedPan: {
     type: DataTypes.STRING,
-    allowNull: true,
-    field: 'masked_pan'
+    allowNull: true
   },
   cardType: {
     type: DataTypes.STRING,
-    allowNull: true,
-    field: 'card_type'
+    allowNull: true
   }
 }, {
   tableName: 'cards',
   timestamps: true,
-  underscored: true // automatically converts camelCase to snake_case
+  underscored: false // Disable automatic snake_case conversion
 });
 
 /**

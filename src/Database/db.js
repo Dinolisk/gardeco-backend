@@ -33,4 +33,20 @@ const testConnection = async () => {
   }
 };
 
-export { sequelize, testConnection };
+// Function to initialize database
+const initializeDatabase = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
+    
+    // Sync all models
+    // Note: In production, you should use migrations instead of sync
+    await sequelize.sync({ alter: true });
+    console.log('Database synchronized successfully');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    throw error;
+  }
+};
+
+export { sequelize, testConnection, initializeDatabase };
