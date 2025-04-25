@@ -5,6 +5,14 @@ import NodeCache from 'node-cache';
 // Create a cache with 5 minutes TTL
 const transactionCache = new NodeCache({ stdTTL: 300 });
 
+// Helper function to format price
+const formatPrice = (price) => {
+  if (typeof price === 'string') {
+    return parseFloat(price).toFixed(2);
+  }
+  return price.toFixed(2);
+};
+
 // --- 1. Model Definition ---
 export const Transaction = sequelize.define('Transaction', {
   id: {
@@ -66,6 +74,64 @@ export const Transaction = sequelize.define('Transaction', {
     defaultValue: 'PENDING',
     allowNull: false,
     comment: 'Tracks the status of X-Receipt digital receipt eligibility and matching'
+  },
+  // New fields for X-Receipts validation
+  cardholder_reference: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  line_items: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    get() {
+      const rawValue = this.getDataValue('line_items');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        // Format prices in line items
+        const formattedValue = value.map(item => ({
+          ...item,
+          itemPrice: {
+            ...item.itemPrice,
+            priceIncVat: formatPrice(item.itemPrice.priceIncVat),
+            priceExcVat: formatPrice(item.itemPrice.priceExcVat),
+            vatAmount: formatPrice(item.itemPrice.vatAmount)
+          },
+          itemSumTotal: formatPrice(item.itemSumTotal),
+          itemIds: {
+            ...item.itemIds,
+            id: item.itemIds?.id || item.itemId || 'N/A'
+          }
+        }));
+        this.setDataValue('line_items', JSON.stringify(formattedValue));
+      } else {
+        this.setDataValue('line_items', null);
+      }
+    }
+  },
+  order_summary: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    get() {
+      const rawValue = this.getDataValue('order_summary');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        // Format prices in order summary
+        const formattedValue = {
+          ...value,
+          totalAmountIncVat: formatPrice(value.totalAmountIncVat),
+          totalAmountExcVat: formatPrice(value.totalAmountExcVat)
+        };
+        this.setDataValue('order_summary', JSON.stringify(formattedValue));
+      } else {
+        this.setDataValue('order_summary', null);
+      }
+    }
   }
 }, {
   tableName: 'transactions',
@@ -106,10 +172,32 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate timestamp format
-    const timestamp = new Date(transactionData.acquirerTransactionTimestamp);
-    if (isNaN(timestamp.getTime())) {
-      throw new Error('Invalid acquirerTransactionTimestamp format');
+    // Validate and normalize timestamp
+    let timestamp;
+    try {
+      timestamp = new Date(transactionData.acquirerTransactionTimestamp);
+      if (isNaN(timestamp.getTime())) {
+        throw new Error('Invalid timestamp format');
+      }
+      
+      // Ensure timestamp is in UTC
+      timestamp = new Date(Date.UTC(
+        timestamp.getUTCFullYear(),
+        timestamp.getUTCMonth(),
+        timestamp.getUTCDate(),
+        timestamp.getUTCHours(),
+        timestamp.getUTCMinutes(),
+        timestamp.getUTCSeconds(),
+        timestamp.getUTCMilliseconds()
+      ));
+      
+      // Validate that timestamp is not in the future
+      const now = new Date();
+      if (timestamp > now) {
+        throw new Error('Transaction timestamp cannot be in the future');
+      }
+    } catch (error) {
+      throw new Error(`Invalid acquirerTransactionTimestamp: ${error.message}`);
     }
 
     // Validate amount format
@@ -138,7 +226,18 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
 
     console.log('Attempting to save transaction with data:', JSON.stringify(data, null, 2));
 
-    const transaction = await Transaction.create(data, { transaction: options.transaction });
+    const transaction = await Transaction.create(data, { 
+      transaction: options.transaction,
+      // Override the default timestamps to use the transaction timestamp
+      timestamps: false 
+    });
+    
+    // Manually set the timestamps to match the transaction timestamp
+    await transaction.update({
+      created_at: timestamp,
+      updated_at: timestamp
+    }, { transaction: options.transaction });
+
     console.log('Saved transaction:', JSON.stringify(transaction.toJSON(), null, 2));
     return transaction;
   } catch (error) {
@@ -216,8 +315,21 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
         console.log('Invalid timestamp format:', checkData.acquirerTransactionTimestamp);
         return null;
       }
-      const startTime = new Date(timestamp.getTime() - 60000);
-      const endTime = new Date(timestamp.getTime() + 60000);
+      
+      // Ensure timestamp is in UTC
+      const utcTimestamp = new Date(Date.UTC(
+        timestamp.getUTCFullYear(),
+        timestamp.getUTCMonth(),
+        timestamp.getUTCDate(),
+        timestamp.getUTCHours(),
+        timestamp.getUTCMinutes(),
+        timestamp.getUTCSeconds(),
+        timestamp.getUTCMilliseconds()
+      ));
+      
+      const startTime = new Date(utcTimestamp.getTime() - 60000);
+      const endTime = new Date(utcTimestamp.getTime() + 60000);
+      
       primaryWhereClause.acquirer_transaction_timestamp = {
         [Op.between]: [startTime, endTime]
       };
@@ -243,9 +355,11 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
       console.log('Using amount range:', minAmount, 'to', maxAmount);
     } else {
       console.log('Invalid amount format:', checkData.transactionAmount.merchantTransactionAmount);
+      return null;
     }
   } else {
     console.log('Missing amount');
+    return null;
   }
 
   // Authorization Code
@@ -254,6 +368,7 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
     console.log('Using authorization code:', checkData.transactionIdentifier.authorizationCode);
   } else {
     console.log('Missing authorization code');
+    return null;
   }
 
   try {
