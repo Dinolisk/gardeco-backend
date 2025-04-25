@@ -10,8 +10,26 @@ export const handleDigitalReceiptRequest = async (req, res) => {
   try {
     const { transactionId } = req.params;
 
-    // Find the transaction
-    const matchedTransaction = await Transaction.findByPk(transactionId);
+    // Find the transaction with all necessary fields
+    const matchedTransaction = await Transaction.findByPk(transactionId, {
+      attributes: [
+        'id',
+        'card_id',
+        'acquirer_terminal_id',
+        'acquirer_merchant_id',
+        'card_type',
+        'acquirer_transaction_timestamp',
+        'transaction_amount',
+        'transaction_currency',
+        'authorization_code',
+        'system_trace_audit_number',
+        'retrieval_reference_number',
+        'masked_pan',
+        'merchant_name',
+        'xreceipt_status'
+      ]
+    });
+
     if (!matchedTransaction) {
       await transaction.rollback();
       return res.status(404).json({
@@ -26,6 +44,9 @@ export const handleDigitalReceiptRequest = async (req, res) => {
         error: 'Transaction is not eligible for digital receipt'
       });
     }
+
+    // Log transaction data for debugging
+    console.log('Transaction data for receipt:', JSON.stringify(matchedTransaction.toJSON(), null, 2));
 
     // Create receipt
     const receipt = await Receipt.create({

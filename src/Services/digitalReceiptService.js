@@ -3,13 +3,11 @@ import { Receipt } from '../Models/receiptModel.js';
 import { ReceiptLineItem } from '../Models/receiptLineItemModel.js';
 import { Transaction } from '../Models/transactionModel.js';
 import { merchantConfig } from '../config/merchant.js';
+import { formatToXDRE } from './xdreceiptService.js';
 
 class DigitalReceiptService {
     constructor() {
-        // XDRE API Configuration
-        this.baseUrl = 'https://stg.xcr.receipts.no/CardRecognition/api';
-        this.apiKey = process.env.XDRE_API_KEY;
-        this.cashierSystemId = process.env.CASHIER_SYSTEM_ID;
+        this.cashierSystemId = process.env.XDRE_CASHIER_SYSTEM_ID || '123456789';
     }
 
     /**
@@ -21,37 +19,15 @@ class DigitalReceiptService {
      */
     async convertToXDREFormat(receipt, transaction, lineItems) {
         try {
-            // Basic receipt structure
-            const xdreReceipt = {
-                xReceipts: {
-                    schemaVersion: "1.0",
-                    cashierSystemId: this.cashierSystemId,
-                    roundTripId: receipt.id.toString(), // We might want to generate a proper UUID
-                    cardId: transaction.cardId, // Assuming this comes from the transaction
-                    cardholderMemberships: [] // Will be populated if membership exists
-                },
-                generalInformation: {
-                    receiptType: "DIGITAL_RECEIPT",
-                    systemTimestamp: receipt.receipt_timestamp.toISOString(),
-                    receiptNumber: receipt.receipt_number
-                },
-                merchant: {
-                    merchantName: merchantConfig.name,
-                    branch: merchantConfig.branch
-                },
-                lineItems: this.convertLineItems(lineItems),
-                orderSummary: {
-                    currencyIsoCode: receipt.currency_iso_code,
-                    totalAmountIncVat: parseFloat(receipt.total_amount_incl_vat),
-                    totalAmountExcVat: parseFloat(receipt.total_amount_excl_vat),
-                    vatSummary: receipt.vat_summary || []
-                },
-                payment: await this.convertPayments(receipt)
-            };
-
+            // Attach lineItems to receipt for formatToXDRE
+            receipt.lineItems = lineItems;
+            
+            // Use formatToXDRE to generate the XDRE receipt
+            const xdreReceipt = formatToXDRE(transaction, receipt);
+            
             return xdreReceipt;
         } catch (error) {
-            console.error('Error converting to XDRE format:', error);
+            console.error('Error converting receipt to XDRE format:', error);
             throw new Error('Failed to convert receipt to XDRE format');
         }
     }

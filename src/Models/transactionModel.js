@@ -79,6 +79,16 @@ export const Transaction = sequelize.define('Transaction', {
 
 export const saveTransaction = async (transactionData, cardId = null, options = {}) => {
   try {
+    // Debug logging for payment card data
+    console.log('Payment card data:', {
+      cardType: transactionData.paymentCard?.cardType,
+      maskedPan: transactionData.paymentCard?.maskedPan,
+      hasMaskedPan: Array.isArray(transactionData.paymentCard?.maskedPan),
+      maskedPanLength: transactionData.paymentCard?.maskedPan?.length,
+      firstMaskedPan: transactionData.paymentCard?.maskedPan?.[0],
+      primaryPan: transactionData.paymentCard?.maskedPan?.find(p => p.maskedPanType === 'PRIMARY_PAN')
+    });
+
     // Validate required fields first
     const requiredFields = {
       'acquirerTerminalId': transactionData.acquirerTerminalId,
@@ -129,6 +139,7 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
     console.log('Attempting to save transaction with data:', JSON.stringify(data, null, 2));
 
     const transaction = await Transaction.create(data, { transaction: options.transaction });
+    console.log('Saved transaction:', JSON.stringify(transaction.toJSON(), null, 2));
     return transaction;
   } catch (error) {
     console.error('Error saving transaction:', error);
@@ -140,14 +151,27 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
 // Add updateXReceiptStatus function
 export const updateXReceiptStatus = async (transactionId, status, options = {}) => {
   try {
+    console.log(`Attempting to update transaction ${transactionId} status to ${status}`);
+    
     const transaction = await Transaction.findByPk(transactionId, { transaction: options.transaction });
     if (!transaction) {
+      console.log(`Transaction ${transactionId} not found`);
       return null;
     }
 
-    await transaction.update({ xreceipt_status: status }, { transaction: options.transaction });
-    return transaction;
+    console.log(`Current status of transaction ${transactionId}:`, transaction.xreceipt_status);
+    
+    const result = await transaction.update({ xreceipt_status: status }, { transaction: options.transaction });
+    console.log(`Updated transaction ${transactionId} status to ${status}`);
+    console.log('Update result:', result);
+    
+    // Verify the update
+    const updatedTransaction = await Transaction.findByPk(transactionId, { transaction: options.transaction });
+    console.log(`Verified status of transaction ${transactionId}:`, updatedTransaction.xreceipt_status);
+    
+    return updatedTransaction;
   } catch (error) {
+    console.error(`Error updating transaction ${transactionId} status:`, error);
     return null;
   }
 };
@@ -155,6 +179,8 @@ export const updateXReceiptStatus = async (transactionId, status, options = {}) 
 // --- 3. Function to Find Matching Transaction (NEW Revised Version) ---
 // Handles nested structure and CR1/CR2/CR3 logic
 export const findMatchingTransaction = async (checkData, options = {}) => {
+  console.log('Starting transaction matching with data:', JSON.stringify(checkData, null, 2));
+
   // Create a cache key from the check data
   const cacheKey = JSON.stringify({
     terminalId: checkData.acquirerTerminalId,
@@ -167,6 +193,7 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
   // Try to get from cache first
   const cachedTransaction = transactionCache.get(cacheKey);
   if (cachedTransaction) {
+    console.log('Found cached transaction:', cachedTransaction.id);
     return cachedTransaction;
   }
 
@@ -175,7 +202,9 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
   // Acquirer Terminal ID
   if (checkData.acquirerTerminalId) {
     primaryWhereClause.acquirer_terminal_id = checkData.acquirerTerminalId;
+    console.log('Using terminal ID:', checkData.acquirerTerminalId);
   } else {
+    console.log('Missing terminal ID');
     return null;
   }
 
@@ -184,6 +213,7 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
     try {
       const timestamp = new Date(checkData.acquirerTransactionTimestamp);
       if (isNaN(timestamp.getTime())) {
+        console.log('Invalid timestamp format:', checkData.acquirerTransactionTimestamp);
         return null;
       }
       const startTime = new Date(timestamp.getTime() - 60000);
@@ -191,10 +221,13 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
       primaryWhereClause.acquirer_transaction_timestamp = {
         [Op.between]: [startTime, endTime]
       };
+      console.log('Using timestamp range:', startTime.toISOString(), 'to', endTime.toISOString());
     } catch (e) {
+      console.log('Error processing timestamp:', e);
       return null;
     }
   } else {
+    console.log('Missing timestamp');
     return null;
   }
 
@@ -207,16 +240,28 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
       primaryWhereClause.transaction_amount = {
         [Op.between]: [minAmount, maxAmount]
       };
+      console.log('Using amount range:', minAmount, 'to', maxAmount);
+    } else {
+      console.log('Invalid amount format:', checkData.transactionAmount.merchantTransactionAmount);
     }
+  } else {
+    console.log('Missing amount');
   }
 
   // Authorization Code
   if (checkData.transactionIdentifier?.authorizationCode) {
     primaryWhereClause.authorization_code = checkData.transactionIdentifier.authorizationCode;
+    console.log('Using authorization code:', checkData.transactionIdentifier.authorizationCode);
+  } else {
+    console.log('Missing authorization code');
   }
 
   try {
-    console.log('Searching for transaction with criteria:', JSON.stringify(primaryWhereClause, null, 2));
+    console.log('Final search criteria:', JSON.stringify(primaryWhereClause, null, 2));
+    
+    // First, let's check if there are any transactions in the database
+    const count = await Transaction.count();
+    console.log('Total transactions in database:', count);
     
     const matches = await Transaction.findAll({
       where: primaryWhereClause,
@@ -227,10 +272,17 @@ export const findMatchingTransaction = async (checkData, options = {}) => {
     if (matches.length > 0) {
       const match = matches[0];
       console.log('Found matching transaction:', match.id);
+      console.log('Match details:', {
+        terminalId: match.acquirer_terminal_id,
+        timestamp: match.acquirer_transaction_timestamp,
+        amount: match.transaction_amount,
+        authCode: match.authorization_code,
+        status: match.xreceipt_status
+      });
       
       // Update status to MATCHED
-      await updateXReceiptStatus(match.id, 'MATCHED', options);
-      console.log('Updated transaction status to MATCHED');
+      const updatedTransaction = await updateXReceiptStatus(match.id, 'MATCHED', options);
+      console.log('Updated transaction status to MATCHED:', updatedTransaction?.xreceipt_status);
       
       // Cache the result
       transactionCache.set(cacheKey, match);
