@@ -3,109 +3,104 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const formatToXDRE = (transaction, receipt) => {
-    // Generate a unique roundTripId
-    const roundTripId = uuidv4();
-
-    // Debug logging
-    console.log('Transaction data:', JSON.stringify(transaction, null, 2));
-    console.log('Transaction fields:', {
-        card_type: transaction.card_type,
-        masked_pan: transaction.masked_pan,
-        acquirer_transaction_timestamp: transaction.acquirer_transaction_timestamp,
-        acquirer_terminal_id: transaction.acquirer_terminal_id,
-        authorization_code: transaction.authorization_code,
-        transaction_amount: transaction.transaction_amount,
-        transaction_currency: transaction.transaction_currency
-    });
-
-    // Ensure transaction data is available
-    if (!transaction) {
-        throw new Error('Transaction data is required');
-    }
-
-    // Create XDRE receipt
-    const xdreReceipt = {
-        xReceipts: {
-            schemaVersion: "1.0",
-            cashierSystemId: process.env.XDRE_CASHIER_SYSTEM_ID || "123456789",
-            roundTripId: roundTripId,
-            cardholderMemberships: []
-        },
-        generalInformation: {
-            receiptType: "DIGITAL_RECEIPT",
-            systemTimestamp: new Date().toISOString(),
-            receiptNumber: receipt.receipt_number
-        },
-        merchant: {
-            merchantName: transaction.merchant_name || "Gardeco",
-            branch: {
-                branchName: "Gardeco Main",
-                slogan: "Din lokala bygghandel",
-                email: "contact@gardeco.no",
-                phone: "+47 12345678",
-                websiteUrl: "https://www.gardeco.no",
-                address: {
-                    addressLine1: process.env.XDRE_MERCHANT_ADDRESS || "Your Address",
-                    city: process.env.XDRE_MERCHANT_CITY || "Your City",
-                    zipCode: process.env.XDRE_MERCHANT_ZIPCODE || "12345",
-                    country: process.env.XDRE_MERCHANT_COUNTRY || "Norway"
-                }
-            }
-        },
-        lineItems: receipt.lineItems.map(item => ({
-            itemName: item.item_name,
-            itemDescription: item.item_description,
-            itemIds: {},
-            itemPrice: {
-                priceIncVat: item.price_incl_vat,
-                priceExcVat: item.price_excl_vat,
-                vatRate: item.vat_rate,
-                vatAmount: item.vat_amount
-            },
-            itemQuantity: {
-                type: item.quantity_type,
-                quantity: item.quantity
-            },
-            itemSumTotal: item.line_total_incl_vat
-        })),
-        orderSummary: {
-            currencyIsoCode: transaction.transaction_currency,
-            totalAmountIncVat: receipt.total_amount_incl_vat,
-            totalAmountExcVat: receipt.total_amount_excl_vat,
-            vatSummary: receipt.vat_summary.map(vat => ({
-                vatRate: vat.vatRate,
-                vatAmount: vat.vatAmount
-            }))
-        },
-        payment: []
-    };
-
-    // Add payment information if transaction has required fields
-    if (transaction.card_type && transaction.masked_pan && transaction.acquirer_transaction_timestamp) {
-        console.log('Adding payment information to receipt');
-        xdreReceipt.payment = [{
-            type: "CARD",
-            cardType: transaction.card_type,
-            maskedPan: transaction.masked_pan,
-            acquirerTransactionTimestamp: transaction.acquirer_transaction_timestamp,
-            acquirerTerminalId: transaction.acquirer_terminal_id,
-            transactionIdentifiers: {
-                authorizationCode: transaction.authorization_code
-            },
-            transactionAmount: {
-                merchantTransactionAmount: parseFloat(transaction.transaction_amount),
-                merchantTransactionCurrency: transaction.transaction_currency
-            }
-        }];
-    } else {
-        console.log('Missing required fields for payment information:', {
-            hasCardType: !!transaction.card_type,
-            hasMaskedPan: !!transaction.masked_pan,
-            hasTimestamp: !!transaction.acquirer_transaction_timestamp
+export const formatToXDRE = (receipt, transaction, lineItems) => {
+    try {
+        console.log('=== XDRE Formatting Debug ===');
+        console.log('Receipt object:', {
+            id: receipt?.id,
+            type: typeof receipt,
+            isNull: receipt === null,
+            isUndefined: receipt === undefined
         });
-    }
+        console.log('Transaction object:', {
+            id: transaction?.id,
+            cardholder_reference: transaction?.cardholder_reference,
+            type: typeof transaction,
+            isNull: transaction === null,
+            isUndefined: transaction === undefined
+        });
+        console.log('Line items:', {
+            count: lineItems?.length,
+            type: typeof lineItems,
+            isArray: Array.isArray(lineItems)
+        });
 
-    console.log('Generated XDRE receipt:', JSON.stringify(xdreReceipt, null, 2));
-    return xdreReceipt;
+        if (!transaction || !transaction.cardholder_reference) {
+            console.error('Missing transaction or cardholder_reference:', {
+                hasTransaction: !!transaction,
+                cardholderReference: transaction?.cardholder_reference,
+                transactionKeys: transaction ? Object.keys(transaction) : []
+            });
+            throw new Error('Transaction data is missing or invalid');
+        }
+
+        const xdreReceipt = {
+            schemaVersion: '1.0',
+            cashierSystemId: 'GARDECO',
+            roundTripId: receipt.receipt_number,
+            cardholderReference: transaction.cardholder_reference,
+            cardholderMemberships: [],
+            merchant: {
+                merchantId: transaction.acquirer_merchant_id,
+                merchantName: transaction.merchant_name,
+                terminalId: transaction.acquirer_terminal_id
+            },
+            transaction: {
+                transactionTimestamp: transaction.acquirer_transaction_timestamp,
+                transactionAmount: {
+                    amount: transaction.transaction_amount,
+                    currency: transaction.transaction_currency
+                },
+                card: {
+                    cardType: transaction.card_type,
+                    maskedPan: transaction.masked_pan
+                },
+                transactionIdentifier: {
+                    authorizationCode: transaction.authorization_code,
+                    systemTraceAuditNumber: transaction.system_trace_audit_number,
+                    retrievalReferenceNumber: transaction.retrieval_reference_number
+                }
+            },
+            lineItems: lineItems.map(item => ({
+                itemName: item.item_name,
+                itemDescription: item.item_description,
+                quantity: item.quantity,
+                quantityType: item.quantity_type,
+                price: {
+                    amount: item.price_incl_vat,
+                    currency: transaction.transaction_currency
+                },
+                vat: {
+                    rate: item.vat_rate,
+                    amount: item.vat_amount
+                },
+                lineTotal: {
+                    amount: item.line_total_incl_vat,
+                    currency: transaction.transaction_currency
+                },
+                itemIds: [
+                    {
+                        id: item.item_id,
+                        ean: item.ean
+                    }
+                ]
+            })),
+            orderSummary: {
+                totalAmount: {
+                    amount: receipt.total_amount_incl_vat,
+                    currency: transaction.transaction_currency
+                },
+                vatSummary: receipt.vat_summary.map(vat => ({
+                    vatRate: vat.vatRate,
+                    vatAmount: vat.vatAmount
+                }))
+            }
+        };
+
+        console.log('Generated XDRE receipt:', JSON.stringify(xdreReceipt, null, 2));
+        return xdreReceipt;
+    } catch (error) {
+        console.error('Error in formatToXDRE:', error);
+        throw error;
+    }
 }; 

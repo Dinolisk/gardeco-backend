@@ -17,17 +17,23 @@ class DigitalReceiptService {
      * @param {Array<ReceiptLineItem>} lineItems - Array of receipt line items
      * @returns {Object} XDRE formatted receipt object
      */
-    async convertToXDREFormat(receipt, transaction, lineItems) {
+    async convertToXDREFormat(transaction, receipt, lineItems) {
         try {
-            // Attach lineItems to receipt for formatToXDRE
-            receipt.lineItems = lineItems;
-            
+            console.log('=== Starting XDRE Conversion ===');
+            console.log('Input receipt:', JSON.stringify(receipt, null, 2));
+            console.log('Input transaction:', JSON.stringify(transaction, null, 2));
+            console.log('Input lineItems:', JSON.stringify(lineItems, null, 2));
+
             // Use formatToXDRE to generate the XDRE receipt
+            console.log('Calling formatToXDRE...');
             const xdreReceipt = formatToXDRE(transaction, receipt);
+            console.log('formatToXDRE completed successfully');
             
             return xdreReceipt;
         } catch (error) {
-            console.error('Error converting receipt to XDRE format:', error);
+            console.error('=== Error in convertToXDREFormat ===');
+            console.error('Original error:', error);
+            console.error('Error stack:', error.stack);
             throw new Error('Failed to convert receipt to XDRE format');
         }
     }
