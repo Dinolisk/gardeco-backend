@@ -28,7 +28,11 @@ export const formatToXDRE = (receipt, transaction, lineItems) => {
             },
             xReceipts: {
                 cardId: receipt.cardId,
-                cardholderReference: receipt.cardholderReference
+                cardholderReference: receipt.cardholderReference,
+                schemaVersion: receipt.schemaVersion,
+                cashierSystemId: receipt.cashierSystemId,
+                roundTripId: receipt.roundTripId,
+                receiptNumber: receipt.receiptNumber
             }
         };
 

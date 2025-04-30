@@ -17,7 +17,11 @@ export const handleDigitalReceiptRequest = async (req, res) => {
                 'authorization_code',
                 'cardholder_reference',
                 'line_items',
-                'order_summary'
+                'order_summary',
+                'schema_version',
+                'cashier_system_id',
+                'round_trip_id',
+                'receipt_number'
             ]
         });
 
@@ -49,7 +53,11 @@ export const handleDigitalReceiptRequest = async (req, res) => {
             amount: transaction.transaction_amount,
             currency: transaction.transaction_currency,
             authorizationCode: transaction.authorization_code,
-            cardholderReference: transaction.cardholder_reference
+            cardholderReference: transaction.cardholder_reference,
+            schemaVersion: transaction.schema_version,
+            cashierSystemId: transaction.cashier_system_id,
+            roundTripId: transaction.round_trip_id,
+            receiptNumber: transaction.receipt_number
         };
 
         const lineItems = transaction.line_items || [];
