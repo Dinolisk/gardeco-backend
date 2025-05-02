@@ -72,27 +72,77 @@ export const Transaction = sequelize.define('Transaction', {
   xreceipt_status: {
     type: DataTypes.ENUM('PENDING', 'MATCHED', 'NOT_ELIGIBLE'),
     defaultValue: 'PENDING',
-    allowNull: false,
-    comment: 'Tracks the status of X-Receipt digital receipt eligibility and matching'
+    allowNull: false
   },
-  // New fields for X-Receipts validation
-  cardholder_reference: {
+  // X-Receipts specific fields
+  schema_version: {
     type: DataTypes.STRING,
-    allowNull: true,
+    allowNull: false,
+    defaultValue: '1.0'
+  },
+  cashier_system_id: {
+    type: DataTypes.STRING(9),
+    allowNull: false
+  },
+  round_trip_id: {
+    type: DataTypes.UUID,
+    allowNull: false
+  },
+  cardholder_reference: {
+    type: DataTypes.UUID,
+    allowNull: false
+  },
+  general_information: {
+    type: DataTypes.JSON,
+    allowNull: false,
     get() {
-      const rawValue = this.getDataValue('cardholder_reference');
-      console.log('Cardholder reference getter:', {
-        rawValue,
-        type: typeof rawValue,
-        isNull: rawValue === null,
-        isUndefined: rawValue === undefined
-      });
-      return rawValue;
+      const rawValue = this.getDataValue('general_information');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        this.setDataValue('general_information', JSON.stringify(value));
+      } else {
+        this.setDataValue('general_information', null);
+      }
+    }
+  },
+  merchant: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    get() {
+      const rawValue = this.getDataValue('merchant');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        this.setDataValue('merchant', JSON.stringify(value));
+      } else {
+        this.setDataValue('merchant', null);
+      }
+    }
+  },
+  branch: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    get() {
+      const rawValue = this.getDataValue('branch');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        this.setDataValue('branch', JSON.stringify(value));
+      } else {
+        this.setDataValue('branch', null);
+      }
     }
   },
   line_items: {
     type: DataTypes.JSON,
-    allowNull: true,
+    allowNull: false,
     get() {
       const rawValue = this.getDataValue('line_items');
       if (!rawValue) return null;
@@ -123,7 +173,7 @@ export const Transaction = sequelize.define('Transaction', {
   },
   order_summary: {
     type: DataTypes.JSON,
-    allowNull: true,
+    allowNull: false,
     get() {
       const rawValue = this.getDataValue('order_summary');
       if (!rawValue) return null;
@@ -142,6 +192,22 @@ export const Transaction = sequelize.define('Transaction', {
         this.setDataValue('order_summary', null);
       }
     }
+  },
+  payment: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    get() {
+      const rawValue = this.getDataValue('payment');
+      if (!rawValue) return null;
+      return JSON.parse(rawValue);
+    },
+    set(value) {
+      if (value) {
+        this.setDataValue('payment', JSON.stringify(value));
+      } else {
+        this.setDataValue('payment', null);
+      }
+    }
   }
 }, {
   tableName: 'transactions',
@@ -155,31 +221,18 @@ export const Transaction = sequelize.define('Transaction', {
 
 export const saveTransaction = async (transactionData, cardId = null, options = {}) => {
   try {
-    // Debug logging for cardholder_reference
-    console.log('Input transactionData:', {
-      cardholderReference: transactionData.cardholderReference,
-      hasCardholderReference: !!transactionData.cardholderReference,
-      typeOfCardholderReference: typeof transactionData.cardholderReference
-    });
-
-    // Debug logging for payment card data
-    console.log('Payment card data:', {
-      cardType: transactionData.paymentCard?.cardType,
-      maskedPan: transactionData.paymentCard?.maskedPan,
-      hasMaskedPan: Array.isArray(transactionData.paymentCard?.maskedPan),
-      maskedPanLength: transactionData.paymentCard?.maskedPan?.length,
-      firstMaskedPan: transactionData.paymentCard?.maskedPan?.[0],
-      primaryPan: transactionData.paymentCard?.maskedPan?.find(p => p.maskedPanType === 'PRIMARY_PAN')
-    });
-
     // Validate required fields first
     const requiredFields = {
-      'acquirerTerminalId': transactionData.acquirerTerminalId,
-      'acquirerTransactionTimestamp': transactionData.acquirerTransactionTimestamp,
-      'transactionAmount.merchantTransactionAmount': transactionData.transactionAmount?.merchantTransactionAmount,
-      'transactionAmount.merchantTransactionCurrency': transactionData.transactionAmount?.merchantTransactionCurrency,
-      'transactionIdentifier.authorizationCode': transactionData.transactionIdentifier?.authorizationCode,
-      'cardholderReference': transactionData.cardholderReference
+      'xReceipts.schemaVersion': transactionData.xReceipts?.schemaVersion,
+      'xReceipts.cashierSystemId': transactionData.xReceipts?.cashierSystemId,
+      'xReceipts.roundTripId': transactionData.xReceipts?.roundTripId,
+      'xReceipts.cardholderReference': transactionData.xReceipts?.cardholderReference,
+      'xReceipts.generalInformation': transactionData.xReceipts?.generalInformation,
+      'xReceipts.merchant': transactionData.xReceipts?.merchant,
+      'xReceipts.branch': transactionData.xReceipts?.branch,
+      'xReceipts.lineItems': transactionData.xReceipts?.lineItems,
+      'xReceipts.orderSummary': transactionData.xReceipts?.orderSummary,
+      'xReceipts.payment': transactionData.xReceipts?.payment
     };
 
     const missingFields = Object.entries(requiredFields)
@@ -190,123 +243,42 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate and normalize timestamp
-    let timestamp;
-    try {
-      timestamp = new Date(transactionData.acquirerTransactionTimestamp);
-      if (isNaN(timestamp.getTime())) {
-        throw new Error('Invalid timestamp format');
-      }
-      
-      // Ensure timestamp is in UTC
-      timestamp = new Date(Date.UTC(
-        timestamp.getUTCFullYear(),
-        timestamp.getUTCMonth(),
-        timestamp.getUTCDate(),
-        timestamp.getUTCHours(),
-        timestamp.getUTCMinutes(),
-        timestamp.getUTCSeconds(),
-        timestamp.getUTCMilliseconds()
-      ));
-      
-      // Validate that timestamp is not in the future
-      const now = new Date();
-      if (timestamp > now) {
-        throw new Error('Transaction timestamp cannot be in the future');
-      }
-    } catch (error) {
-      throw new Error(`Invalid acquirerTransactionTimestamp: ${error.message}`);
-    }
-
-    // Validate amount format
-    const amount = parseFloat(transactionData.transactionAmount.merchantTransactionAmount);
-    if (isNaN(amount)) {
-      throw new Error('Invalid transaction amount format');
-    }
-
-    // Extract line items and order summary from receipt if available
-    const lineItems = transactionData.receipt?.lineItems?.map(item => ({
-      itemName: item.itemName,
-      itemDescription: item.itemDescription,
-      itemIds: {
-        id: item.itemIds?.id || 'N/A',
-        ean: item.itemIds?.ean || 'N/A'
-      },
-      itemPrice: {
-        priceIncVat: Number(item.itemPrice?.priceIncVat),
-        priceExcVat: Number(item.itemPrice?.priceExcVat),
-        vatRate: Number(item.itemPrice?.vatRate),
-        vatAmount: Number(item.itemPrice?.vatAmount)
-      },
-      itemQuantity: {
-        type: item.itemQuantity?.type || 'PIECE',
-        quantity: Number(item.itemQuantity?.quantity)
-      },
-      itemSumTotal: Number(item.itemSumTotal)
-    })) || [];
-
-    const orderSummary = transactionData.receipt?.orderSummary ? {
-      currencyIsoCode: transactionData.receipt.orderSummary.currencyIsoCode,
-      totalAmountIncVat: Number(transactionData.receipt.orderSummary.totalAmountIncVat),
-      totalAmountExcVat: Number(transactionData.receipt.orderSummary.totalAmountExcVat),
-      vatSummary: transactionData.receipt.orderSummary.vatSummary?.map(vat => ({
-        vatRate: Number(vat.vatRate),
-        vatAmount: Number(vat.vatAmount)
-      })) || []
-    } : null;
-
-    const data = {
+    // Prepare transaction data
+    const transactionRecord = {
       card_id: cardId,
-      acquirer_terminal_id: transactionData.acquirerTerminalId,
-      acquirer_merchant_id: transactionData.acquirerMerchantId,
-      card_type: transactionData.paymentCard?.cardType,
-      acquirer_transaction_timestamp: timestamp,
-      transaction_amount: amount,
-      transaction_currency: transactionData.transactionAmount.merchantTransactionCurrency,
-      authorization_code: transactionData.transactionIdentifier.authorizationCode,
-      system_trace_audit_number: transactionData.transactionIdentifier?.systemTraceAuditNumber,
-      retrieval_reference_number: transactionData.transactionIdentifier?.retrievalReferenceNumber,
-      masked_pan: Array.isArray(transactionData.paymentCard?.maskedPan) && transactionData.paymentCard.maskedPan.length > 0
-        ? transactionData.paymentCard.maskedPan.find(p => p.maskedPanType === 'PRIMARY_PAN')?.maskedPanValue || transactionData.paymentCard.maskedPan[0].maskedPanValue
-        : null,
-      merchant_name: transactionData.merchantName,
-      xreceipt_status: 'PENDING',
-      line_items: lineItems,
-      order_summary: orderSummary,
-      cardholder_reference: transactionData.cardholderReference
+      schema_version: transactionData.xReceipts.schemaVersion,
+      cashier_system_id: transactionData.xReceipts.cashierSystemId,
+      round_trip_id: transactionData.xReceipts.roundTripId,
+      cardholder_reference: transactionData.xReceipts.cardholderReference,
+      general_information: transactionData.xReceipts.generalInformation,
+      merchant: transactionData.xReceipts.merchant,
+      branch: transactionData.xReceipts.branch,
+      line_items: transactionData.xReceipts.lineItems,
+      order_summary: transactionData.xReceipts.orderSummary,
+      payment: transactionData.xReceipts.payment,
+      // Extract payment details from the first payment method
+      acquirer_terminal_id: transactionData.xReceipts.payment[0]?.acquirerTerminalId,
+      acquirer_merchant_id: transactionData.xReceipts.payment[0]?.acquirerMerchantId,
+      card_type: transactionData.xReceipts.payment[0]?.cardType,
+      acquirer_transaction_timestamp: new Date(transactionData.xReceipts.payment[0]?.acquirerTransactionTimestamp),
+      transaction_amount: transactionData.xReceipts.payment[0]?.transactionAmount?.merchantTransactionAmount,
+      transaction_currency: transactionData.xReceipts.payment[0]?.transactionAmount?.merchantTransactionCurrency,
+      authorization_code: transactionData.xReceipts.payment[0]?.transactionIdentifier?.authorizationCode,
+      system_trace_audit_number: transactionData.xReceipts.payment[0]?.transactionIdentifier?.systemTraceAuditNumber,
+      retrieval_reference_number: transactionData.xReceipts.payment[0]?.transactionIdentifier?.retrievalReferenceNumber,
+      masked_pan: transactionData.xReceipts.payment[0]?.maskedPan,
+      merchant_name: transactionData.xReceipts.merchant?.merchantName
     };
 
-    // Debug logging for data object before create
-    console.log('Data object before create:', {
-      cardholder_reference: data.cardholder_reference,
-      hasCardholder_reference: !!data.cardholder_reference,
-      typeOfCardholder_reference: typeof data.cardholder_reference
+    // Create transaction
+    const transaction = await Transaction.create(transactionRecord, {
+      ...options,
+      transaction: options.transaction
     });
 
-    const transaction = await Transaction.create(data, { 
-      transaction: options.transaction,
-      timestamps: false 
-    });
-    
-    // Debug logging for created transaction
-    console.log('Created transaction:', {
-      cardholder_reference: transaction.cardholder_reference,
-      hasCardholder_reference: !!transaction.cardholder_reference,
-      typeOfCardholder_reference: typeof transaction.cardholder_reference,
-      rawData: transaction.get({ plain: true })
-    });
-
-    // Manually set the timestamps to match the transaction timestamp
-    await transaction.update({
-      created_at: timestamp,
-      updated_at: timestamp
-    }, { transaction: options.transaction });
-
-    console.log('Saved transaction:', JSON.stringify(transaction.toJSON(), null, 2));
     return transaction;
   } catch (error) {
     console.error('Error saving transaction:', error);
-    // Add more context to the error
     throw new Error(`Failed to save transaction: ${error.message}`);
   }
 };

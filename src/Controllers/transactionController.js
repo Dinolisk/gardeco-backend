@@ -22,6 +22,89 @@ export const handleTransaction = async (req, res, next) => {
       return res.status(400).json({ error: "Missing cardId or transactionData" });
     }
 
+    // Prepare X-Receipts structure
+    const xReceiptsData = {
+      xReceipts: {
+        schemaVersion: "1.0",
+        cashierSystemId: "GARDECO",
+        roundTripId: `XRC-${Date.now()}`,
+        cardholderReference: cardId,
+        generalInformation: {
+          receiptType: "DIGITAL_RECEIPT",
+          systemTimestamp: transactionData.acquirerTransactionTimestamp,
+          receiptNumber: `REC-${Date.now()}`,
+          receiptStatus: "COMPLETED",
+          receiptTimestamp: transactionData.acquirerTransactionTimestamp
+        },
+        merchant: {
+          merchantName: transactionData.merchantName,
+          merchantId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
+          merchantAddress: {
+            street: "Testgatan 1",
+            city: "Stockholm",
+            postalCode: "12345",
+            country: "SE"
+          }
+        },
+        branch: {
+          branchName: transactionData.merchantName,
+          branchId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
+          branchAddress: {
+            street: "Testgatan 1",
+            city: "Stockholm",
+            postalCode: "12345",
+            country: "SE"
+          }
+        },
+        lineItems: [{
+          itemName: "Test Product",
+          itemDescription: "Test Description",
+          itemIds: {
+            id: "TEST001",
+            ean: "1234567890123"
+          },
+          itemPrice: {
+            priceIncVat: transactionData.transactionAmount.merchantTransactionAmount.toString(),
+            priceExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString(),
+            vatRate: "25.00",
+            vatAmount: (transactionData.transactionAmount.merchantTransactionAmount - (transactionData.transactionAmount.merchantTransactionAmount / 1.25)).toString()
+          },
+          quantity: "1.000",
+          quantityType: "PCS",
+          itemSumTotal: transactionData.transactionAmount.merchantTransactionAmount.toString(),
+          itemMetadataList: []
+        }],
+        orderSummary: {
+          currencyIsoCode: transactionData.transactionAmount.merchantTransactionCurrency,
+          totalAmountIncVat: transactionData.transactionAmount.merchantTransactionAmount.toString(),
+          totalAmountExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString(),
+          vatSummary: [{
+            vatRate: "25.00",
+            vatAmount: (transactionData.transactionAmount.merchantTransactionAmount - (transactionData.transactionAmount.merchantTransactionAmount / 1.25)).toString(),
+            amountExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString()
+          }]
+        },
+        payment: [{
+          paymentMethod: "CARD",
+          paymentType: "CREDIT",
+          cardType: transactionData.paymentCard.cardType,
+          maskedPan: transactionData.paymentCard.maskedPan[0].maskedPanValue,
+          acquirerTerminalId: transactionData.acquirerTerminalId,
+          acquirerMerchantId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
+          acquirerTransactionTimestamp: transactionData.acquirerTransactionTimestamp,
+          transactionAmount: {
+            merchantTransactionAmount: transactionData.transactionAmount.merchantTransactionAmount,
+            merchantTransactionCurrency: transactionData.transactionAmount.merchantTransactionCurrency
+          },
+          transactionIdentifier: {
+            authorizationCode: transactionData.transactionIdentifier.authorizationCode,
+            systemTraceAuditNumber: transactionData.transactionIdentifier.systemTraceAuditNumber,
+            retrievalReferenceNumber: transactionData.transactionIdentifier.retrievalReferenceNumber
+          }
+        }]
+      }
+    };
+
     // Save card information
     if (transactionData.paymentCard) {
       console.log('Saving card information...');
@@ -54,7 +137,7 @@ export const handleTransaction = async (req, res, next) => {
     // Save transaction
     console.log('Saving transaction...');
     try {
-      const savedTransaction = await saveTransaction(transactionData, cardId, { transaction });
+      const savedTransaction = await saveTransaction(xReceiptsData, cardId, { transaction });
       console.log('Transaction saved successfully:', savedTransaction.id);
       
       await transaction.commit();

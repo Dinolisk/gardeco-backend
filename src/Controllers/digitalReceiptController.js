@@ -21,7 +21,15 @@ export const handleDigitalReceiptRequest = async (req, res) => {
                 'schema_version',
                 'cashier_system_id',
                 'round_trip_id',
-                'receipt_number'
+                'receipt_number',
+                'merchant_name',
+                'card_type',
+                'masked_pan',
+                'acquirer_merchant_id',
+                'system_trace_audit_number',
+                'retrieval_reference_number',
+                'merchant',
+                'branch'
             ]
         });
 
@@ -36,7 +44,10 @@ export const handleDigitalReceiptRequest = async (req, res) => {
             terminalId: transaction.acquirer_terminal_id,
             amount: transaction.transaction_amount,
             currency: transaction.transaction_currency,
-            authCode: transaction.authorization_code
+            authCode: transaction.authorization_code,
+            merchantName: transaction.merchant_name,
+            cardType: transaction.card_type,
+            maskedPan: transaction.masked_pan
         });
 
         // Kontrollera om transaktionen är berättigad till digitalt kvitto
@@ -57,7 +68,15 @@ export const handleDigitalReceiptRequest = async (req, res) => {
             schemaVersion: transaction.schema_version,
             cashierSystemId: transaction.cashier_system_id,
             roundTripId: transaction.round_trip_id,
-            receiptNumber: transaction.receipt_number
+            receiptNumber: transaction.receipt_number,
+            merchantName: transaction.merchant_name,
+            cardType: transaction.card_type,
+            maskedPan: transaction.masked_pan,
+            acquirerMerchantId: transaction.acquirer_merchant_id,
+            systemTraceAuditNumber: transaction.system_trace_audit_number,
+            retrievalReferenceNumber: transaction.retrieval_reference_number,
+            merchant: transaction.merchant,
+            branch: transaction.branch
         };
 
         const lineItems = transaction.line_items || [];

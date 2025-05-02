@@ -5,12 +5,12 @@ dotenv.config();
 
 // Create Sequelize instance with connection pool configuration
 const sequelize = new Sequelize(
-  'cashiersystem_db',  // Use the exact database name
-  'root',
-  'qwER67890B!vbwe',
+  process.env.DB_NAME || 'cashiersystem_db',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || 'qwER67890B!vbwe',
   {
-    host: 'localhost',
-    port: 3306,
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT) || 3306,
     dialect: 'mysql',
     logging: false,
     pool: {

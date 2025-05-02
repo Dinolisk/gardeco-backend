@@ -1,0 +1,84 @@
+{
+  "xReceipts": {
+    "schemaVersion": "1.0",
+    "cashierSystemId": "SE123456789", // Måste vara ett giltigt svenskt organisationsnummer
+    "roundTripId": "550e8400-e29b-41d4-a716-446655440000", // Måste vara ett giltigt UUID
+    "cardholderReference": "550e8400-e29b-41d4-a716-446655440000", // Måste vara ett giltigt UUID
+    "generalInformation": {
+      "receiptNumber": "123456",
+      "receiptTimestamp": "2024-04-30T12:00:00Z",
+      "receiptType": "SALE",
+      "receiptStatus": "COMPLETED"
+    },
+    "merchant": {
+      "merchantName": "Test Merchant AB",
+      "merchantId": "123456789",
+      "merchantAddress": {
+        "street": "Testgatan 1",
+        "city": "Stockholm",
+        "postalCode": "12345",
+        "country": "SE"
+      }
+    },
+    "branch": {
+      "branchName": "Test Branch",
+      "branchId": "BR123",
+      "branchAddress": {
+        "street": "Testgatan 1",
+        "city": "Stockholm",
+        "postalCode": "12345",
+        "country": "SE"
+      }
+    },
+    "lineItems": [
+      {
+        "itemName": "Test Product 1",
+        "itemDescription": "Test Description 1",
+        "itemPrice": {
+          "priceIncVat": "100.00",
+          "priceExcVat": "80.00",
+          "vatAmount": "20.00",
+          "vatRate": "25.00"
+        },
+        "quantity": "1.000",
+        "quantityType": "PCS",
+        "itemSumTotal": "100.00",
+        "itemIds": {
+          "id": "PROD001",
+          "ean": "1234567890123"
+        }
+      }
+    ],
+    "orderSummary": {
+      "totalAmountIncVat": "100.00",
+      "totalAmountExcVat": "80.00",
+      "vatSummary": [
+        {
+          "vatRate": "25.00",
+          "vatAmount": "20.00",
+          "amountExcVat": "80.00"
+        }
+      ]
+    },
+    "payment": [
+      {
+        "paymentMethod": "CARD",
+        "paymentType": "CREDIT",
+        "cardType": "VISA",
+        "maskedPan": "************1234",
+        "acquirerTerminalId": "TERM123", // Måste matcha ett registrerat terminal-ID
+        "acquirerMerchantId": "MERCH123", // Måste matcha ett registrerat merchant-ID
+        "acquirerTransactionTimestamp": "2024-04-30T12:00:00Z",
+        "transactionAmount": {
+          "merchantTransactionAmount": "100.00",
+          "merchantTransactionCurrency": "SEK"
+        },
+        "transactionIdentifier": {
+          "authorizationCode": "123456",
+          "systemTraceAuditNumber": "123456",
+          "retrievalReferenceNumber": "123456789012"
+        }
+      }
+    ]
+  }
+} 
