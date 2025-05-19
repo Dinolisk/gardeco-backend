@@ -12,8 +12,6 @@ export const handleDigitalReceiptRequest = async (req, res) => {
                 'card_id',
                 'acquirer_terminal_id',
                 'acquirer_transaction_timestamp',
-                'transaction_amount',
-                'transaction_currency',
                 'authorization_code',
                 'cardholder_reference',
                 'line_items',
@@ -21,15 +19,13 @@ export const handleDigitalReceiptRequest = async (req, res) => {
                 'schema_version',
                 'cashier_system_id',
                 'round_trip_id',
-                'receipt_number',
                 'merchant_name',
                 'card_type',
                 'masked_pan',
                 'acquirer_merchant_id',
                 'system_trace_audit_number',
                 'retrieval_reference_number',
-                'merchant',
-                'branch'
+                'payment'
             ]
         });
 
@@ -42,8 +38,7 @@ export const handleDigitalReceiptRequest = async (req, res) => {
             id: transaction.id,
             cardholderReference: transaction.cardholder_reference,
             terminalId: transaction.acquirer_terminal_id,
-            amount: transaction.transaction_amount,
-            currency: transaction.transaction_currency,
+            payment: transaction.payment,
             authCode: transaction.authorization_code,
             merchantName: transaction.merchant_name,
             cardType: transaction.card_type,
@@ -52,17 +47,41 @@ export const handleDigitalReceiptRequest = async (req, res) => {
 
         // Kontrollera om transaktionen är berättigad till digitalt kvitto
         if (!transaction.cardholder_reference) {
-            return res.status(400).json({ error: 'Transaction not eligible for digital receipt' });
+            // Om cardholder_reference saknas, använd ett defaultvärde
+            transaction.cardholder_reference = 'DEFAULT-REF';
         }
 
+        // Se till att merchant_name mappas till merchant.merchantName
+        // Om transaction.merchant inte finns, skapa det
+        if (!transaction.merchant) {
+            transaction.merchant = {};
+        }
+        transaction.merchant.merchantName = transaction.merchant_name;
+
         // Skapa kvittot och konvertera till XDRE-format
+        // Hämta belopp och valuta från payment (JSON) istället för transaction_amount/transaction_currency
+        let amount = null;
+        let currency = null;
+        if (transaction.payment) {
+            // payment kan vara array eller objekt
+            const paymentObj = Array.isArray(transaction.payment) ? transaction.payment[0] : transaction.payment;
+            amount = paymentObj?.merchantTransactionAmount || paymentObj?.transactionAmount?.merchantTransactionAmount || null;
+            currency = paymentObj?.merchantTransactionCurrency || paymentObj?.transactionAmount?.merchantTransactionCurrency || null;
+        }
+        // fallback till order_summary om payment saknas
+        if (!amount && transaction.order_summary) {
+            amount = transaction.order_summary.totalAmountIncVat || null;
+        }
+        if (!currency && transaction.order_summary) {
+            currency = transaction.order_summary.currencyIsoCode || null;
+        }
         const receipt = {
             transactionId: transaction.id,
             cardId: transaction.card_id,
             terminalId: transaction.acquirer_terminal_id,
             timestamp: transaction.acquirer_transaction_timestamp,
-            amount: transaction.transaction_amount,
-            currency: transaction.transaction_currency,
+            amount: amount,
+            currency: currency,
             authorizationCode: transaction.authorization_code,
             cardholderReference: transaction.cardholder_reference,
             schemaVersion: transaction.schema_version,

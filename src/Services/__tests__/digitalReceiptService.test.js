@@ -1,13 +1,13 @@
 import { jest } from '@jest/globals';
 import { digitalReceiptService } from '../digitalReceiptService.js';
-import { Receipt } from 'models/receiptModel.js';
-import { ReceiptLineItem } from 'models/receiptLineItemModel.js';
-import { Transaction } from 'models/transactionModel.js';
+import { Receipt } from '../../Models/receiptModel.js';
+import { ReceiptLineItem } from '../../Models/receiptLineItemModel.js';
+import { Transaction } from '../../Models/transactionModel.js';
 
 // Mock the models and their relationships
-jest.mock('models/receiptModel.js');
-jest.mock('models/receiptLineItemModel.js');
-jest.mock('models/transactionModel.js');
+jest.mock('../../Models/receiptModel.js');
+jest.mock('../../Models/receiptLineItemModel.js');
+jest.mock('../../Models/transactionModel.js');
 
 describe('DigitalReceiptService', () => {
     let mockReceipt;

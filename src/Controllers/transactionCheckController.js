@@ -70,10 +70,13 @@ export const handleTransactionCheck = async (req, res) => {
 
     // --- 4. Uppdatera Transaktion med cardId vid Match ---
     const cardIdToUpdate = body.xReceipts.cardId;
+    // Bevara cardholder_reference om det finns
+    const cardholderReferenceToKeep = matchingTransaction.cardholder_reference;
 
     await matchingTransaction.update({
       card_id: cardIdToUpdate,
-      xreceipt_status: 'MATCHED'
+      xreceipt_status: 'MATCHED',
+      ...(cardholderReferenceToKeep ? { cardholder_reference: cardholderReferenceToKeep } : {})
     }, { transaction });
     console.log(`Transaction ${matchingTransaction.id} updated with card_id and MATCHED status.`);
 

@@ -10,109 +10,89 @@ export const handleTransaction = async (req, res, next) => {
   try {
     const { cardId, transactionData } = req.body;
     
+    console.log('Raw transactionData type:', typeof transactionData);
+    console.log('Raw transactionData:', transactionData);
+    
+    // Parse transactionData if it's a string
+    const parsedTransactionData = typeof transactionData === 'string' ? JSON.parse(transactionData) : transactionData;
+    
+    console.log('Parsed transactionData type:', typeof parsedTransactionData);
+    console.log('Parsed transactionData:', JSON.stringify(parsedTransactionData, null, 2));
+    console.log('SchemaVersion from parsed data:', parsedTransactionData.schemaVersion);
+    
     console.log('Received transaction request:', {
       cardId,
-      transactionData: JSON.stringify(transactionData, null, 2)
+      transactionData: JSON.stringify(parsedTransactionData, null, 2)
     });
 
     // Basic validation
-    if (!cardId || !transactionData) {
-      console.error('Missing required fields:', { cardId: !!cardId, transactionData: !!transactionData });
+    if (!cardId || !parsedTransactionData) {
+      console.error('Missing required fields:', { cardId: !!cardId, transactionData: !!parsedTransactionData });
       await transaction.rollback();
       return res.status(400).json({ error: "Missing cardId or transactionData" });
     }
 
     // Prepare X-Receipts structure
     const xReceiptsData = {
+      schemaVersion: parsedTransactionData.schemaVersion,
       xReceipts: {
-        schemaVersion: "1.0",
-        cashierSystemId: "GARDECO",
-        roundTripId: `XRC-${Date.now()}`,
-        cardholderReference: cardId,
-        generalInformation: {
-          receiptType: "DIGITAL_RECEIPT",
-          systemTimestamp: transactionData.acquirerTransactionTimestamp,
-          receiptNumber: `REC-${Date.now()}`,
-          receiptStatus: "COMPLETED",
-          receiptTimestamp: transactionData.acquirerTransactionTimestamp
+        clientId: parsedTransactionData.clientId || "123456789",
+        roundTripId: parsedTransactionData.roundTripId || "123e4567-e89b-12d3-a456-426614174000",
+        cardholderReference: parsedTransactionData.cardholderReference,
+        cardholderConsents: parsedTransactionData.cardholderConsents || [],
+        cardholderMemberships: parsedTransactionData.cardholderMemberships || [],
+        lineItems: parsedTransactionData.xReceipts?.lineItems || [],
+        orderSummary: parsedTransactionData.xReceipts?.orderSummary || {}
+      },
+      line_items: parsedTransactionData.xReceipts?.lineItems || [],
+      order_summary: parsedTransactionData.xReceipts?.orderSummary || {},
+      merchantName: parsedTransactionData.merchantName,
+      acquirerTerminalId: parsedTransactionData.acquirerTerminalId,
+      acquirerTransactionTimestamp: parsedTransactionData.acquirerTransactionTimestamp,
+      transactionAmount: {
+        merchantTransactionAmount: parsedTransactionData.transactionAmount.merchantTransactionAmount,
+        merchantTransactionCurrency: parsedTransactionData.transactionAmount.merchantTransactionCurrency,
+        cardholderTransactionAmount: parsedTransactionData.transactionAmount.cardholderTransactionAmount,
+        cardholderTransactionCurrency: parsedTransactionData.transactionAmount.cardholderTransactionCurrency
+      },
+      transactionIdentifier: {
+        authorizationCode: parsedTransactionData.transactionIdentifier.authorizationCode,
+        systemTraceAuditNumber: parsedTransactionData.transactionIdentifier.systemTraceAuditNumber,
+        retrievalReferenceNumber: parsedTransactionData.transactionIdentifier.retrievalReferenceNumber
+      },
+      paymentCard: {
+        cardType: parsedTransactionData.paymentCard.cardType,
+        maskedPan: parsedTransactionData.paymentCard.maskedPan,
+        acquirerMerchantIds: parsedTransactionData.paymentCard.acquirerMerchantIds
+      },
+      payment: [{
+        paymentMethod: "CARD",
+        paymentType: "CREDIT",
+        cardType: parsedTransactionData.paymentCard.cardType,
+        maskedPan: parsedTransactionData.paymentCard.maskedPan[0].maskedPanValue,
+        acquirerTerminalId: parsedTransactionData.acquirerTerminalId,
+        acquirerMerchantId: parsedTransactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
+        acquirerTransactionTimestamp: parsedTransactionData.acquirerTransactionTimestamp,
+        transactionAmount: {
+          merchantTransactionAmount: parsedTransactionData.transactionAmount.merchantTransactionAmount,
+          merchantTransactionCurrency: parsedTransactionData.transactionAmount.merchantTransactionCurrency
         },
-        merchant: {
-          merchantName: transactionData.merchantName,
-          merchantId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
-          merchantAddress: {
-            street: "Testgatan 1",
-            city: "Stockholm",
-            postalCode: "12345",
-            country: "SE"
-          }
-        },
-        branch: {
-          branchName: transactionData.merchantName,
-          branchId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
-          branchAddress: {
-            street: "Testgatan 1",
-            city: "Stockholm",
-            postalCode: "12345",
-            country: "SE"
-          }
-        },
-        lineItems: [{
-          itemName: "Test Product",
-          itemDescription: "Test Description",
-          itemIds: {
-            id: "TEST001",
-            ean: "1234567890123"
-          },
-          itemPrice: {
-            priceIncVat: transactionData.transactionAmount.merchantTransactionAmount.toString(),
-            priceExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString(),
-            vatRate: "25.00",
-            vatAmount: (transactionData.transactionAmount.merchantTransactionAmount - (transactionData.transactionAmount.merchantTransactionAmount / 1.25)).toString()
-          },
-          quantity: "1.000",
-          quantityType: "PCS",
-          itemSumTotal: transactionData.transactionAmount.merchantTransactionAmount.toString(),
-          itemMetadataList: []
-        }],
-        orderSummary: {
-          currencyIsoCode: transactionData.transactionAmount.merchantTransactionCurrency,
-          totalAmountIncVat: transactionData.transactionAmount.merchantTransactionAmount.toString(),
-          totalAmountExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString(),
-          vatSummary: [{
-            vatRate: "25.00",
-            vatAmount: (transactionData.transactionAmount.merchantTransactionAmount - (transactionData.transactionAmount.merchantTransactionAmount / 1.25)).toString(),
-            amountExcVat: (transactionData.transactionAmount.merchantTransactionAmount / 1.25).toString()
-          }]
-        },
-        payment: [{
-          paymentMethod: "CARD",
-          paymentType: "CREDIT",
-          cardType: transactionData.paymentCard.cardType,
-          maskedPan: transactionData.paymentCard.maskedPan[0].maskedPanValue,
-          acquirerTerminalId: transactionData.acquirerTerminalId,
-          acquirerMerchantId: transactionData.paymentCard?.acquirerMerchantIds?.acquirerMerchantId,
-          acquirerTransactionTimestamp: transactionData.acquirerTransactionTimestamp,
-          transactionAmount: {
-            merchantTransactionAmount: transactionData.transactionAmount.merchantTransactionAmount,
-            merchantTransactionCurrency: transactionData.transactionAmount.merchantTransactionCurrency
-          },
-          transactionIdentifier: {
-            authorizationCode: transactionData.transactionIdentifier.authorizationCode,
-            systemTraceAuditNumber: transactionData.transactionIdentifier.systemTraceAuditNumber,
-            retrievalReferenceNumber: transactionData.transactionIdentifier.retrievalReferenceNumber
-          }
-        }]
-      }
+        transactionIdentifier: {
+          authorizationCode: parsedTransactionData.transactionIdentifier.authorizationCode,
+          systemTraceAuditNumber: parsedTransactionData.transactionIdentifier.systemTraceAuditNumber,
+          retrievalReferenceNumber: parsedTransactionData.transactionIdentifier.retrievalReferenceNumber
+        }
+      }]
     };
 
     // Save card information
-    if (transactionData.paymentCard) {
+    if (parsedTransactionData.paymentCard) {
       console.log('Saving card information...');
       try {
         await saveCard(
           cardId,
-          transactionData.paymentCard.maskedPan?.[0]?.maskedPanValue,
-          transactionData.paymentCard.cardType,
+          parsedTransactionData.paymentCard.maskedPan?.[0]?.maskedPanValue,
+          parsedTransactionData.paymentCard.cardType,
           { transaction }
         );
         console.log('Card information saved successfully');
@@ -123,10 +103,10 @@ export const handleTransaction = async (req, res, next) => {
     }
 
     // Save membership information if present
-    if (transactionData.membership) {
+    if (parsedTransactionData.membership) {
       console.log('Saving membership information...');
       try {
-        await saveMembership(transactionData.membership, cardId, { transaction });
+        await saveMembership(parsedTransactionData.membership, cardId, { transaction });
         console.log('Membership information saved successfully');
       } catch (membershipError) {
         console.error('Error saving membership:', membershipError);

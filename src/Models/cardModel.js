@@ -3,16 +3,16 @@ import { sequelize } from '../Database/db.js';
 
 export const Card = sequelize.define('Card', {
   cardId: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: false,
     primaryKey: true
   },
   maskedPan: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: true
   },
   cardType: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: true
   }
 }, {

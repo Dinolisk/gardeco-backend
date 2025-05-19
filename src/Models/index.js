@@ -8,6 +8,7 @@ import { Card } from './cardModel.js';
 import { Membership } from './membershipModel.js';
 import { Receipt, PaymentMethod } from './receiptModel.js'; // Båda från samma fil
 import { ReceiptLineItem } from './receiptLineItemModel.js';
+import { ReceiptStatus } from './receiptStatusModel.js';
 
 // Skapa ett objekt för att hålla alla modeller och sequelize-instansen
 const db = {};
@@ -19,6 +20,7 @@ db.Membership = Membership;
 db.Receipt = Receipt;
 db.PaymentMethod = PaymentMethod;
 db.ReceiptLineItem = ReceiptLineItem;
+db.ReceiptStatus = ReceiptStatus;
 
 // Lägg till sequelize-instansen och Sequelize-klassen (bra att ha)
 db.sequelize = sequelize;
@@ -37,6 +39,16 @@ db.Receipt.belongsTo(db.Transaction, {
 db.Transaction.hasMany(db.Receipt, {
   foreignKey: 'transaction_id', // Kolumnen i receipts-tabellen
   as: 'receipts'                // Valfritt alias
+});
+
+// --- Relationer för ReceiptStatus ---
+db.ReceiptStatus.belongsTo(db.Transaction, {
+  foreignKey: 'transaction_id',
+  as: 'transaction'
+});
+db.Transaction.hasMany(db.ReceiptStatus, {
+  foreignKey: 'transaction_id',
+  as: 'statuses'
 });
 
 // Ett Kvitto (Receipt) har många Betalningsmetoder (PaymentMethod)

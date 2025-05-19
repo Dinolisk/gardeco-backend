@@ -4,24 +4,35 @@ import { sequelize } from '../Database/db.js';
 
 // === Uppdaterad Receipt-modell ===
 const Receipt = sequelize.define('Receipt', {
-  // id: (INTEGER, PK, AI) läggs till automatiskt av Sequelize
-  total_amount_incl_vat: {      // Bytte namn från 'total', ändrad typ
-    type: DataTypes.DECIMAL(10, 2), // Korrekt typ för belopp
-    allowNull: false,
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
   },
-  receipt_number: {             // NY kolumn
+  total_amount_incl_vat: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  receipt_number: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    unique: true                // Om du satte UNIQUE i Workbench
+    unique: true
   },
-  receipt_timestamp: {          // NY kolumn
-    type: DataTypes.DATE,       // DATETIME i MySQL mappas till DATE i Sequelize
-    allowNull: false,
-    // defaultValue: DataTypes.NOW // Kan sättas här om inte DEFAULT CURRENT_TIMESTAMP finns i DB
+  receipt_timestamp: {
+    type: DataTypes.DATE,
+    allowNull: false
   },
-  total_amount_excl_vat: {      // NY kolumn
+  total_amount_excl_vat: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    allowNull: false
   },
   currency_iso_code: {          // NY kolumn
     type: DataTypes.STRING(3),
@@ -37,55 +48,63 @@ const Receipt = sequelize.define('Receipt', {
   },
 }, {
   tableName: 'receipts',
-  timestamps: true,             // Använder createdAt och updatedAt automatiskt
-  createdAt: 'createdAt',       // Mappa till era kolumnnamn om de skiljer sig
-  updatedAt: 'updatedAt'        // t.ex. created_at, updated_at
+  timestamps: false
 });
 
 // === Uppdaterad PaymentMethod-modell ===
 const PaymentMethod = sequelize.define('PaymentMethod', {
-  // id: (INTEGER, PK, AI) läggs till automatiskt av Sequelize
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   receipt_id: {
     type: DataTypes.INTEGER,
     allowNull: false
   },
   method: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   amount: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    allowNull: false
   },
   label: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   details: {
     type: DataTypes.JSON,
-    allowNull: true,
+    allowNull: true
   },
   timestamp: {
     type: DataTypes.DATE,
     allowNull: false
   },
   cardType: {
-    type: DataTypes.STRING,
-    allowNull: true,
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
-  last4: {  // Changed from maskedPan to last4
-    type: DataTypes.STRING,
-    allowNull: true,
+  last4: {
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
-  changeGiven: {  // Added missing field
+  changeGiven: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: true
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    allowNull: false
   }
 }, {
   tableName: 'paymentmethods',
-  timestamps: true,
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  timestamps: false
 });
 
 // Add associations

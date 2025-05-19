@@ -3,22 +3,25 @@ import { sequelize } from '../Database/db.js';
 
 // --- Model Definition (med export direkt) ---
 export const Membership = sequelize.define('Membership', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   card_id: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: false
-    // Överväg primaryKey: true här om card_id+membership_id är PK
   },
   membership_id: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: false
-    // Överväg primaryKey: true här om card_id+membership_id är PK
   },
   membership_type: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: true
   },
   membership_level: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: true
   }
   // Notera: Om card_id+membership_id inte är primärnyckel,

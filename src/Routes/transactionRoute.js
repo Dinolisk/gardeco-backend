@@ -1,21 +1,20 @@
 import express from 'express';
 // Importera dina controllers och middleware
 // Anpassa sökvägarna om de inte stämmer exakt
-import { handleTransaction } from '../Controllers/transactionController.js'; // <--- Aktiv igen
+import { handleTransaction } from '../Controllers/transactionController.js';
 import { handleTransactionCheck } from '../Controllers/transactionCheckController.js';
 import { handleDigitalReceiptRequest } from '../Controllers/digitalReceiptController.js';
 import { authMiddleware } from '../Middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Route för vanliga transaktioner (om den fortfarande behövs)
-router.post('/transaction', authMiddleware, handleTransaction); // <--- Aktiv igen
+// Steg 1: Transaktionshantering
+router.post('/transaction', authMiddleware, handleTransaction);
 
-// Route specifikt för X-Receipts Transaction Check Request
-// Både authMiddleware och controllern appliceras korrekt
+// Steg 2: Transaktionscheck
 router.post('/transaction-check', authMiddleware, handleTransactionCheck);
 
-// Route för att hämta digitalt kvitto för en transaktion
+// Steg 3: Digitalt kvitto
 router.get('/transaction/:transactionId/receipt', authMiddleware, handleDigitalReceiptRequest);
 
 // Exportera routern så den kan användas i din huvudapplikation (t.ex. server.js/index.js)

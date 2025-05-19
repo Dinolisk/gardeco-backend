@@ -48,8 +48,8 @@ const initializeDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection established');
     
-    await sequelize.sync({ alter: true });
-    console.log('✅ Database tables synchronized successfully');
+    // Remove the sync call since we want to match existing tables
+    // await sequelize.sync({ alter: true });
   } catch (err) {
     console.error('❌ Error initializing database:', err);
     // Don't exit, try to continue without database
