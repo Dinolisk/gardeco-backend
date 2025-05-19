@@ -21,9 +21,9 @@ const transactionData = {
   clientId,     // krävs av backend
   roundTripId,  // krävs av backend
   acquirerTerminalId: 'TERM002',
-  acquirerTransactionTimestamp: new Date().toISOString(),
+  acquirerTransactionTimestamp: '2025-05-19T22:22:15.982Z',
   transactionAmount: {
-    merchantTransactionAmount: 1250.50,
+    merchantTransactionAmount: 1250.5,
     merchantTransactionCurrency: 'NOK'
   },
   transactionIdentifier: {
@@ -44,7 +44,29 @@ const transactionData = {
     }
   },
   merchantName: 'Gardeco Store',
-  cardholderReference: 'TEST-REF-123'
+  cardholderReference: 'TEST-REF-123',
+  lineItems: [
+    {
+      itemName: 'Bryggkaffe',
+      itemDescription: 'Färskbryggt kaffe',
+      itemId: '1001',
+      itemPrice: 30.00,
+      itemQuantity: 2,
+      quantityType: 'PCS',
+      itemSumTotal: 60.00,
+      itemMetadataList: [
+        { key: 'kategori', value: 'dryck' }
+      ]
+    }
+  ],
+  orderSummary: {
+    currencyIsoCode: 'NOK',
+    totalAmountIncVat: 1250.5,
+    totalAmountExcVat: 1000.4,
+    vatSummary: [
+      { vatRate: 12, vatAmount: 3.21 }
+    ]
+  }
 };
 
 describe('X-Receipt End-to-End Flow', () => {

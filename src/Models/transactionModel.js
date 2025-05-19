@@ -337,20 +337,24 @@ export const saveTransaction = async (transactionData, cardId = null, options = 
       console.log('Added schemaVersion to parsed data:', schemaVersion);
     }
 
+    // DEBUG: Log parsedData just before extracting lineItems and orderSummary
+    console.log('DEBUG: parsedData just before extracting lineItems:', JSON.stringify(parsedData, null, 2));
     // Extract line_items and order_summary from the correct location
-    const lineItems = parsedData.line_items || parsedData.xReceipts?.lineItems || [];
-    const orderSummary = parsedData.order_summary || parsedData.xReceipts?.orderSummary || {};
+    const lineItems =
+      parsedData.lineItems ||
+      parsedData.line_items ||
+      parsedData.xReceipts?.lineItems ||
+      [];
 
-    console.log('Extracted line_items and order_summary:', {
-      lineItems,
-      orderSummary,
-      source: {
-        hasLineItems: Boolean(parsedData.line_items),
-        hasXReceiptsLineItems: Boolean(parsedData.xReceipts?.lineItems),
-        hasOrderSummary: Boolean(parsedData.order_summary),
-        hasXReceiptsOrderSummary: Boolean(parsedData.xReceipts?.orderSummary)
-      }
-    });
+    const orderSummary =
+      parsedData.orderSummary ||
+      parsedData.order_summary ||
+      parsedData.xReceipts?.orderSummary ||
+      {};
+
+    // DEBUG: Log extracted lineItems and orderSummary
+    console.log('DEBUG: lineItems:', JSON.stringify(lineItems, null, 2));
+    console.log('DEBUG: orderSummary:', JSON.stringify(orderSummary, null, 2));
 
     // Validate required fields first
     const requiredFields = {

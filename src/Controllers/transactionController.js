@@ -41,11 +41,11 @@ export const handleTransaction = async (req, res, next) => {
         cardholderReference: parsedTransactionData.cardholderReference,
         cardholderConsents: parsedTransactionData.cardholderConsents || [],
         cardholderMemberships: parsedTransactionData.cardholderMemberships || [],
-        lineItems: parsedTransactionData.xReceipts?.lineItems || [],
-        orderSummary: parsedTransactionData.xReceipts?.orderSummary || {}
+        lineItems: parsedTransactionData.lineItems || parsedTransactionData.xReceipts?.lineItems || [],
+        orderSummary: parsedTransactionData.orderSummary || parsedTransactionData.xReceipts?.orderSummary || {}
       },
-      line_items: parsedTransactionData.xReceipts?.lineItems || [],
-      order_summary: parsedTransactionData.xReceipts?.orderSummary || {},
+      line_items: parsedTransactionData.lineItems || parsedTransactionData.xReceipts?.lineItems || [],
+      order_summary: parsedTransactionData.orderSummary || parsedTransactionData.xReceipts?.orderSummary || {},
       merchantName: parsedTransactionData.merchantName,
       acquirerTerminalId: parsedTransactionData.acquirerTerminalId,
       acquirerTransactionTimestamp: parsedTransactionData.acquirerTransactionTimestamp,
@@ -115,7 +115,7 @@ export const handleTransaction = async (req, res, next) => {
     }
 
     // Save transaction
-    console.log('Saving transaction...');
+    console.log('DEBUG: xReceiptsData sent to saveTransaction:', JSON.stringify(xReceiptsData, null, 2));
     try {
       const savedTransaction = await saveTransaction(xReceiptsData, cardId, { transaction });
       console.log('Transaction saved successfully:', savedTransaction.id);
