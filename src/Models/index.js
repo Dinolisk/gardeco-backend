@@ -78,6 +78,7 @@ db.ReceiptLineItem.belongsTo(db.Receipt, {
 db.Membership.belongsTo(db.Card, {
   foreignKey: 'card_id'
 });
+
 // Ett Kort (CardInfo) kan ha många Medlemskap (Membership)
 db.Card.hasMany(db.Membership, {
   foreignKey: 'card_id',

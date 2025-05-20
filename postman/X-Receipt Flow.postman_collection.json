@@ -1,12 +1,14 @@
 {
 	"info": {
-		"_postman_id": "123e4567-e89b-12d3-a456-426614174000",
+		"_postman_id": "134737b9-a5d7-47a4-9857-fd6988a242ea",
 		"name": "X-Receipt Flow",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"description": "### **Instruktioner**\n\nAPI-nyckeln är redan konfigurerad i kollektionen.\n\n---\n\n### **Flödesbeskrivning**\n\nDetta flöde består av tre steg:\n\n1. **\\[POST\\] Create Transaction** – simulerar ett köp\n    \n2. **\\[POST\\] Transaction Check** – matchar mot X-receipt\n    \n3. **\\[GET\\] Get Receipt** – hämtar och visar kvittot\n    \n\n---\n\n### **Viktig information**\n\nTesterna körs mot `receipts.gardeco.se` som är hostad på vår Windows-server.\n\nFlödet fungerar så länge:\n\n- Windows-servern är igång\n    \n- PM2-processen (backend-servern) är aktiv\n    \n\nAlla tester som körs i detta flöde (transaktioner, matchningar och kvitton) sparas automatiskt i vår databas på Windows-servern.\n\n---\n\n### **Testdata**\n\n- **Steg 1:** Använd den medföljande testdatan för att skapa en transaktion.\n    \n- **Steg 2:** Använd testdatan för att simulera en POST-request från X-receipt som ska matcha transaktionen i vårt system.\n    \n- **Observera:** Samma testdata kan endast användas en gång.\n    \n- Du kan generera ny testdata med AI så länge du behåller samma datastruktur.\n    \n\n---\n\n### **För att hämta kvitto (Steg 3):**\n\n1. Kör **Steg 1**\n    \n2. Kopiera ID:et från svaret (vanligtvis i rad 3)\n    \n3. Kör **Steg 2** för att vid matchning ändra transaktionens status från `pending` till `matched`  \n    _(detta motsvarar att kundens bankkort är kopplat till X-receipt-tjänsten)_\n    \n4. Ersätt `{{transaction_id}}` i endpointen i Steg 3 med det kopierade ID:t\n    \n\n### **Exempel:**\n\n`https://receipts.gardeco.se/api/transaction/12/receipt`\n\n### **Testdata:**\n\n### Använd i steg 1: Create Transaction\n\n``` json\n{\n  \"cardId\": \"555e8400-e29b-41d4-a716-446655555555\",\n  \"transactionData\": {\n    \"schemaVersion\": \"V1.0\",\n    \"clientId\": \"777888999\",\n    \"roundTripId\": \"678e9012-e89b-12d3-a456-426614176000\",\n    \"acquirerTerminalId\": \"TERM006\",\n    \"acquirerTransactionTimestamp\": \"2024-03-21T11:25:44.123Z\",\n    \"transactionAmount\": {\n      \"merchantTransactionAmount\": 449.80,\n      \"merchantTransactionCurrency\": \"SEK\"\n    },\n    \"transactionIdentifier\": {\n      \"authorizationCode\": \"678901\",\n      \"systemTraceAuditNumber\": \"901234\",\n      \"retrievalReferenceNumber\": \"234567890\"\n    },\n    \"paymentCard\": {\n      \"cardType\": \"MASTERCARD\",\n      \"maskedPan\": [\n        {\n          \"maskedPanType\": \"PRIMARY_PAN\",\n          \"maskedPanValue\": \"************6543\"\n        }\n      ],\n      \"acquirerMerchantIds\": {\n        \"acquirerMerchantId\": \"MERCH006\"\n      }\n    },\n    \"merchantName\": \"Gardeco Store\",\n    \"cardholderReference\": \"TEST-REF-345\",\n    \"lineItems\": [\n      {\n        \"itemName\": \"Växthus\",\n        \"itemDescription\": \"Växthus 2x3m med ventilation\",\n        \"itemId\": \"5001\",\n        \"itemPrice\": 399.90,\n        \"itemQuantity\": 1,\n        \"quantityType\": \"PCS\",\n        \"itemSumTotal\": 399.90,\n        \"itemMetadataList\": [\n          { \"key\": \"kategori\", \"value\": \"växthus\" }\n        ]\n      },\n      {\n        \"itemName\": \"Växtljus\",\n        \"itemDescription\": \"LED-växtljus 30W\",\n        \"itemId\": \"5002\",\n        \"itemPrice\": 49.90,\n        \"itemQuantity\": 1,\n        \"quantityType\": \"PCS\",\n        \"itemSumTotal\": 49.90,\n        \"itemMetadataList\": [\n          { \"key\": \"kategori\", \"value\": \"tillbehör\" }\n        ]\n      }\n    ],\n    \"orderSummary\": {\n      \"currencyIsoCode\": \"SEK\",\n      \"totalAmountIncVat\": 449.80,\n      \"totalAmountExcVat\": \"359.84\",\n      \"vatSummary\": [\n        {\n          \"vatRate\": \"25\",\n          \"vatAmount\": \"89.96\"\n        }\n      ]\n    }\n  }\n}\n\n ```\n\n### **Testdata:**\n\n### Använd i steg 2: Transaction Check\n\n``` json\n{\n  \"acquirerTerminalId\": \"TERM006\",\n  \"acquirerTransactionTimestamp\": \"2024-03-21T11:25:44.123Z\",\n  \"transactionAmount\": {\n    \"merchantTransactionAmount\": 449.80,\n    \"merchantTransactionCurrency\": \"SEK\"\n  },\n  \"transactionIdentifier\": {\n    \"authorizationCode\": \"678901\",\n    \"systemTraceAuditNumber\": \"901234\",\n    \"retrievalReferenceNumber\": \"234567890\"\n  },\n  \"paymentCard\": {\n    \"cardType\": \"MASTERCARD\",\n    \"maskedPan\": [\n      {\n        \"maskedPanType\": \"PRIMARY_PAN\",\n        \"maskedPanValue\": \"************6543\"\n      }\n    ],\n    \"acquirerMerchantIds\": {\n      \"acquirerMerchantId\": \"MERCH006\"\n    }\n  },\n  \"merchantName\": \"Gardeco Store\",\n  \"xReceipts\": {\n    \"cardId\": \"555e8400-e29b-41d4-a716-446655555555\",\n    \"clientId\": \"777888999\",\n    \"roundTripId\": \"678e9012-e89b-12d3-a456-426614176000\"\n  }\n}\n\n ```\n\n## Förväntade Resultat\n\n- Steg 1: Ska returnera 200 OK med ett transaktions-ID\n    \n- Steg 2: Ska returnera 200 OK\n    \n- Steg 3: Ska returnera 200 OK med kvittot i XDRE-format\n    \n\n## Felsökning\n\n- Kontrollera att tidsstämplar är aktuella\n    \n- Se till att cardId matchar mellan steg 1 och 2\n    \n- Verifiera att alla obligatoriska fält finns med i request-bodyn\n    \n- Om servern inte svarar, kontrollera att Windows-servern och PM2 är igång",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "9075873"
 	},
 	"item": [
 		{
-			"name": "1. Create Initial Transaction",
+			"name": "1. Create Transaction",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -16,23 +18,32 @@
 					},
 					{
 						"key": "x-api-key",
-						"value": "{{api_key}}"
+						"value": "8c791850881a3498fb31975b85eeab0d2f4142786a0b73720b022e299edb63a3"
 					}
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"cardId\": \"CARD123\",\n    \"transactionData\": {\n        \"acquirerTerminalId\": \"TERM002\",\n        \"acquirerTransactionTimestamp\": \"{{$isoTimestamp}}\",\n        \"transactionAmount\": {\n            \"merchantTransactionAmount\": 1250.50,\n            \"merchantTransactionCurrency\": \"NOK\"\n        },\n        \"transactionIdentifier\": {\n            \"authorizationCode\": \"AUTH456\",\n            \"systemTraceAuditNumber\": \"789012\",\n            \"retrievalReferenceNumber\": \"456789012\"\n        },\n        \"paymentCard\": {\n            \"cardType\": \"MASTERCARD\",\n            \"maskedPan\": [\n                {\n                    \"maskedPanType\": \"PRIMARY_PAN\",\n                    \"maskedPanValue\": \"************5678\"\n                }\n            ],\n            \"acquirerMerchantIds\": {\n                \"acquirerMerchantId\": \"MERCH002\"\n            }\n        },\n        \"merchantName\": \"Gardeco Store\"\n    }\n}"
+					"raw": "{\n  \"cardId\": \"111e8400-e29b-41d4-a716-446655441111\",\n  \"transactionData\": {\n    \"schemaVersion\": \"V1.0\",\n    \"clientId\": \"123456789\",\n    \"roundTripId\": \"987e6543-e89b-12d3-a456-426614174000\",\n    \"acquirerTerminalId\": \"TERM002\",\n    \"acquirerTransactionTimestamp\": \"2025-05-20T10:15:30.123Z\",\n    \"transactionAmount\": {\n      \"merchantTransactionAmount\": 1250.5,\n      \"merchantTransactionCurrency\": \"NOK\"\n    },\n    \"transactionIdentifier\": {\n      \"authorizationCode\": \"654321\",\n      \"systemTraceAuditNumber\": \"210987\",\n      \"retrievalReferenceNumber\": \"987654321\"\n    },\n    \"paymentCard\": {\n      \"cardType\": \"MASTERCARD\",\n      \"maskedPan\": [\n        {\n          \"maskedPanType\": \"PRIMARY_PAN\",\n          \"maskedPanValue\": \"************5678\"\n        }\n      ],\n      \"acquirerMerchantIds\": {\n        \"acquirerMerchantId\": \"MERCH002\"\n      }\n    },\n    \"merchantName\": \"Gardeco Store\",\n    \"cardholderReference\": \"TEST-REF-456\",\n    \"lineItems\": [\n      {\n        \"itemName\": \"Bryggkaffe\",\n        \"itemDescription\": \"Färskbryggt kaffe\",\n        \"itemId\": \"1001\",\n        \"itemPrice\": 30.00,\n        \"itemQuantity\": 2,\n        \"quantityType\": \"PCS\",\n        \"itemSumTotal\": 60.00,\n        \"itemMetadataList\": [\n          { \"key\": \"kategori\", \"value\": \"dryck\" }\n        ]\n      },\n      {\n        \"itemName\": \"Kanelbulle\",\n        \"itemDescription\": \"Nygräddad bulle\",\n        \"itemId\": \"1002\",\n        \"itemPrice\": 25.00,\n        \"itemQuantity\": 1,\n        \"quantityType\": \"PCS\",\n        \"itemSumTotal\": 25.00,\n        \"itemMetadataList\": [\n          { \"key\": \"kategori\", \"value\": \"bakverk\" }\n        ]\n      }\n    ],\n    \"orderSummary\": {\n      \"currencyIsoCode\": \"NOK\",\n      \"totalAmountIncVat\": 85.00,\n      \"totalAmountExcVat\": \"68.00\",\n      \"vatSummary\": [\n        {\n          \"vatRate\": \"25\",\n          \"vatAmount\": \"17.00\"\n        }\n      ]\n    }\n  }\n}"
 				},
 				"url": {
-					"raw": "{{base_url}}/api/transaction",
-					"host": ["{{base_url}}"],
-					"path": ["api", "transaction"]
+					"raw": "https://receipts.gardeco.se/api/transaction",
+					"protocol": "https",
+					"host": [
+						"receipts",
+						"gardeco",
+						"se"
+					],
+					"path": [
+						"api",
+						"transaction"
+					]
 				},
-				"description": "Create an initial transaction in our system when customer pays"
-			}
+				"description": "Skapar en initial transaktion i systemet när kunden betalar. Svaret kommer innehålla ett transaktions-ID som behövs för steg 3. All transaktionsdata sparas i vår databas för framtida referens."
+			},
+			"response": []
 		},
 		{
-			"name": "2. X-Receipt Transaction Check",
+			"name": "2. Transaction Check",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -42,38 +53,58 @@
 					},
 					{
 						"key": "x-api-key",
-						"value": "{{api_key}}"
+						"value": "8c791850881a3498fb31975b85eeab0d2f4142786a0b73720b022e299edb63a3"
 					}
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"acquirerTerminalId\": \"TERM002\",\n    \"acquirerTransactionTimestamp\": \"{{$isoTimestamp}}\",\n    \"transactionAmount\": {\n        \"merchantTransactionAmount\": 1250.50,\n        \"merchantTransactionCurrency\": \"NOK\"\n    },\n    \"transactionIdentifier\": {\n        \"authorizationCode\": \"AUTH456\",\n        \"systemTraceAuditNumber\": \"789012\",\n        \"retrievalReferenceNumber\": \"456789012\"\n    },\n    \"paymentCard\": {\n        \"cardType\": \"MASTERCARD\",\n        \"maskedPan\": [\n            {\n                \"maskedPanType\": \"PRIMARY_PAN\",\n                \"maskedPanValue\": \"************5678\"\n            }\n        ],\n        \"acquirerMerchantIds\": {\n            \"acquirerMerchantId\": \"MERCH002\"\n        }\n    },\n    \"merchantName\": \"Gardeco Store\",\n    \"xReceipts\": {\n        \"cardId\": \"CARD123\"\n    }\n}"
+					"raw": "{\n  \"acquirerTerminalId\": \"TERM002\",\n  \"acquirerTransactionTimestamp\": \"2025-05-20T10:15:30.123Z\",\n  \"transactionAmount\": {\n    \"merchantTransactionAmount\": 1250.5,\n    \"merchantTransactionCurrency\": \"NOK\"\n  },\n  \"transactionIdentifier\": {\n    \"authorizationCode\": \"654321\",\n    \"systemTraceAuditNumber\": \"210987\",\n    \"retrievalReferenceNumber\": \"987654321\"\n  },\n  \"paymentCard\": {\n    \"cardType\": \"MASTERCARD\",\n    \"maskedPan\": [\n      {\n        \"maskedPanType\": \"PRIMARY_PAN\",\n        \"maskedPanValue\": \"************5678\"\n      }\n    ],\n    \"acquirerMerchantIds\": {\n      \"acquirerMerchantId\": \"MERCH002\"\n    }\n  },\n  \"merchantName\": \"Gardeco Store\",\n  \"xReceipts\": {\n    \"cardId\": \"111e8400-e29b-41d4-a716-446655441111\",\n    \"clientId\": \"123456789\",\n    \"roundTripId\": \"987e6543-e89b-12d3-a456-426614174000\"\n  }\n}"
 				},
 				"url": {
-					"raw": "{{base_url}}/api/transaction-check",
-					"host": ["{{base_url}}"],
-					"path": ["api", "transaction-check"]
+					"raw": "https://receipts.gardeco.se/api/transaction-check",
+					"protocol": "https",
+					"host": [
+						"receipts",
+						"gardeco",
+						"se"
+					],
+					"path": [
+						"api",
+						"transaction-check"
+					]
 				},
-				"description": "X-Receipt sends this to check if we have a matching transaction"
-			}
+				"description": "X-Receipt skickar denna request för att kontrollera om vi har en matchande transaktion. Använd samma testdata som i steg 1, men lägg till xReceipts-objektet med samma cardId, clientId och roundTripId."
+			},
+			"response": []
 		},
 		{
-			"name": "3. Get Digital Receipt",
+			"name": "3. Get Receipt",
 			"request": {
 				"method": "GET",
 				"header": [
 					{
 						"key": "x-api-key",
-						"value": "{{api_key}}"
+						"value": "8c791850881a3498fb31975b85eeab0d2f4142786a0b73720b022e299edb63a3"
 					}
 				],
 				"url": {
-					"raw": "{{base_url}}/api/transaction/{{transaction_id}}/receipt",
-					"host": ["{{base_url}}"],
-					"path": ["api", "transaction", "{{transaction_id}}", "receipt"]
+					"raw": "https://receipts.gardeco.se/api/transaction/{{transaction_id}}/receipt",
+					"protocol": "https",
+					"host": [
+						"receipts",
+						"gardeco",
+						"se"
+					],
+					"path": [
+						"api",
+						"transaction",
+						"{{transaction_id}}",
+						"receipt"
+					]
 				},
-				"description": "Get the digital receipt in XDRE format for a matched transaction"
-			}
+				"description": "Hämtar det digitala kvittot i XDRE-format för en matchad transaktion. transaction_id sätts automatiskt från svaret i steg 1."
+			},
+			"response": []
 		}
 	],
 	"event": [
@@ -99,17 +130,5 @@
 				]
 			}
 		}
-	],
-	"variable": [
-		{
-			"key": "base_url",
-			"value": "http://localhost:4001",
-			"type": "string"
-		},
-		{
-			"key": "api_key",
-			"value": "your-api-key-here",
-			"type": "string"
-		}
 	]
-} 
+}

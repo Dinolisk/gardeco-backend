@@ -25,12 +25,21 @@ export const handleDigitalReceiptRequest = async (req, res) => {
                 'acquirer_merchant_id',
                 'system_trace_audit_number',
                 'retrieval_reference_number',
-                'payment'
+                'payment',
+                'xreceipt_status'
             ]
         });
 
         if (!transaction) {
             return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        // Kontrollera att transaktionen har matchats med X-receipt
+        if (transaction.xreceipt_status !== 'MATCHED') {
+            return res.status(403).json({ 
+                error: 'Transaction has not been matched with X-receipt',
+                status: transaction.xreceipt_status
+            });
         }
 
         // Logga transaktionsdata för felsökning
@@ -42,7 +51,8 @@ export const handleDigitalReceiptRequest = async (req, res) => {
             authCode: transaction.authorization_code,
             merchantName: transaction.merchant_name,
             cardType: transaction.card_type,
-            maskedPan: transaction.masked_pan
+            maskedPan: transaction.masked_pan,
+            xreceiptStatus: transaction.xreceipt_status
         });
 
         // Kontrollera om transaktionen är berättigad till digitalt kvitto
